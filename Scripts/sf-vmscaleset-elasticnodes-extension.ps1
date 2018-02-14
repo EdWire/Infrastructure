@@ -7,10 +7,10 @@
 #---------------------------
 
 Param (
-    [Switch] $sfEsStorageAccountName = $false,
-    [Switch] $sfEsStorageAccountKey = $false,
-    [Switch] $sfEsStorageAccountShareName = $true,
-    [Switch] $driveLetter = "e"
+    [string] $sfEsStorageAccountName,
+    [string] $sfEsStorageAccountKey,
+    [string] $sfEsStorageAccountShareName,
+    [string] $driveLetter = "Z"
 )
 
 #---------------------------
@@ -19,7 +19,8 @@ Param (
 
 $acctKey = ConvertTo-SecureString -String "$sfEsStorageAccountKey" -AsPlainText -Force
 $credential = New-Object System.Management.Automation.PSCredential -ArgumentList "Azure\$sfEsStorageAccountName", $acctKey
-New-PSDrive -Name $driveLetter -PSProvider FileSystem -Root "\\$sfEsStorageAccountName.file.core.windows.net\$sfEsStorageAccountShareName" -Credential $credential
+New-PSDrive -Name $driveLetter -PSProvider FileSystem -Root "\\$sfEsStorageAccountName.file.core.windows.net\$sfEsStorageAccountShareName" -Credential $credential -Persist
+
 
 #---------------------------
 # Install Java SDK
