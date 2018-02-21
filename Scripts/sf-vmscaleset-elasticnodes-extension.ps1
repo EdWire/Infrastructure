@@ -33,7 +33,7 @@ New-PSDrive -Name $driveLetter -PSProvider FileSystem -Root "\\$sfEsStorageAccou
 #---------------------------
 
 # install chocolatey
-#(iex ((new-object net.webclient).DownloadString('https://chocolatey.org/install.ps1')))>$null 2>&1
+(iex ((new-object net.webclient).DownloadString('https://chocolatey.org/install.ps1')))>$null 2>&1
 
 # install java
-#choco install -y -force javaruntime
+choco install -y -force javaruntime
