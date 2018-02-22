@@ -25,7 +25,7 @@ Write-Host "driveLetter: $driveLetter"
 $acctKey = ConvertTo-SecureString -String "$sfEsStorageAccountKey" -AsPlainText -Force
 $credential = New-Object System.Management.Automation.PSCredential -ArgumentList "Azure\$sfEsStorageAccountName", $acctKey
 
-New-PSDrive -Name $driveLetter -PSProvider FileSystem -Root "\\$sfEsStorageAccountName.file.core.windows.net\$sfEsStorageAccountShareName" -Credential $credential -Persist
+New-PSDrive -Name $driveLetter -PSProvider FileSystem -Root "\\$sfEsStorageAccountName.file.core.windows.net\$sfEsStorageAccountShareName" -Scope Global -Credential $credential -Persist
 
 
 #---------------------------
