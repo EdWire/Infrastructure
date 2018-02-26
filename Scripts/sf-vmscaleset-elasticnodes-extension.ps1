@@ -13,7 +13,7 @@ Param (
 # Mount Data Drive (lun = 0)
 #---------------------------
 
-$dataDisk0 = Get-Disk | Where-Object {$_.PartitionStyle -eq 'raw' -and ($_.Number -eq 3) }
+$dataDisk0 = Get-Disk | Where-Object {$_.PartitionStyle -eq 'raw' -and ($_.Number -eq 2) }
 
 $dataDisk0 | 
 Initialize-Disk -PartitionStyle MBR -PassThru |
