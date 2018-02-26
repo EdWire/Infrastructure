@@ -17,7 +17,7 @@ $dataDisk0 = Get-Disk | Where-Object {$_.PartitionStyle -eq 'raw' -and ($_.Numbe
 
 $dataDisk0 | 
 Initialize-Disk -PartitionStyle MBR -PassThru |
-New-Partition -UseMaximumSize -DriveLetter "E" |
+New-Partition -UseMaximumSize -DriveLetter "G" |
 Format-Volume -FileSystem NTFS -NewFileSystemLabel "DataDisk0" -Confirm:$false -Force
 
 #---------------------------
