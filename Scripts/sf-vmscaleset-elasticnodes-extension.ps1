@@ -7,26 +7,18 @@
 #---------------------------
 
 Param (
-    [string] $sfEsStorageAccountName,
-    [string] $sfEsStorageAccountKey,
-    [string] $sfEsStorageAccountShareName,
-    [string] $driveLetter = "Z"
 )
 
 #---------------------------
-# Mount File Share 
+# Mount Data Drive (lun = 0)
 #---------------------------
 
-Write-Host "sfEsStorageAccountName: $sfEsStorageAccountName"
-Write-Host "sfEsStorageAccountKey: $sfEsStorageAccountKey"
-Write-Host "sfEsStorageAccountShareName: $sfEsStorageAccountShareName"
-Write-Host "driveLetter: $driveLetter"
+$dataDisk0 = Get-Disk | Where-Object {$_.PartitionStyle -eq 'raw' -and ($_.Number -eq 3) }
 
-$acctKey = ConvertTo-SecureString -String "$sfEsStorageAccountKey" -AsPlainText -Force
-$credential = New-Object System.Management.Automation.PSCredential -ArgumentList "Azure\$sfEsStorageAccountName", $acctKey
-
-New-PSDrive -Name $driveLetter -PSProvider FileSystem -Root "\\$sfEsStorageAccountName.file.core.windows.net\$sfEsStorageAccountShareName" -Scope Global -Credential $credential -Persist
-
+$dataDisk0 | 
+Initialize-Disk -PartitionStyle MBR -PassThru |
+New-Partition -UseMaximumSize -DriveLetter "E" |
+Format-Volume -FileSystem NTFS -NewFileSystemLabel "DataDisk0" -Confirm:$false -Force
 
 #---------------------------
 # Install Java SDK
