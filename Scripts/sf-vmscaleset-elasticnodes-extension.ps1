@@ -49,6 +49,6 @@ Write-Output "Installing Chocolatey"
 # install java
 Write-Output "Installing Java Runtime"
 
-choco install -y -force javaruntime
+choco install -y -force jre8 --version 8.0.161
 
 Write-Output "Completed Installing Java SDK"
