@@ -5,10 +5,10 @@
 param(
     [switch]$PrepEleasticSearch = $false,
     [switch]$SetPermissionToCertificate = $false,
-    [string]$userName = "Network Service",
-    [string]$permission = "full",
-    [string]$certStoreLocation = "\LocalMachine\My",
-    [string]$certThumbprint = "ed 83 77 19 54 da 83 fd bb fd b9 65 85 44 7c 02 12 c3 91 ca"
+    [string]$UserName = "Network Service",
+    [string]$Permission = "full",
+    [string]$CertStoreLocation = "\LocalMachine\My",
+    [string]$CertThumbprint = "ed 83 77 19 54 da 83 fd bb fd b9 65 85 44 7c 02 12 c3 91 ca"
 );
 
 
@@ -108,5 +108,5 @@ if ($PrepEleasticSearch -eq $true)
 
 if ($SetPermissionToCertificate -eq $true)
 {
-    SetPermissionToCertificate -userName $userName -permission $permission -certStoreLocation $certStoreLocation -certThumbprint $certThumbprint
+    SetPermissionToCertificate -userName $UserName -permission $Permission -certStoreLocation $CertStoreLocation -certThumbprint $CertThumbprint
 }
