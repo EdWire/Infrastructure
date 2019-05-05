@@ -2,7 +2,7 @@
     [string]$userName = "Network Service",
     [string]$permission = "full",
     [string]$certStoreLocation = "\LocalMachine\My",
-    [string]$certThumbprint = "51CEBE8EFD2BF6AC2227A7AD49E77E47DCF78441"
+    [string]$certThumbprint = "ed 83 77 19 54 da 83 fd bb fd b9 65 85 44 7c 02 12 c3 91 ca"
 );
 # check if certificate is already installed
 $certificateInstalled = Get-ChildItem cert:$certStoreLocation | Where thumbprint -eq $certThumbprint
