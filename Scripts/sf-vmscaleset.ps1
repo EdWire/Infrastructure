@@ -4,7 +4,7 @@
 
 param(
     [switch]$PrepEleasticSearch = $false,
-    [switch]$SetPermissionToCertificate = $false,
+    [switch]$SetPermissionToCertificate = $true,
     [string]$UserName = "Network Service",
     [string]$Permission = "full",
     [string]$CertStoreLocation = "\LocalMachine\My",
