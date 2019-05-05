@@ -4,11 +4,11 @@
 
 param(
     [switch]$PrepEleasticSearch = $false,
-    [switch]$SetPermissionToCertificate = $true,
+    [switch]$SetPermissionToCertificate = $false,
     [string]$UserName = "Network Service",
     [string]$Permission = "full",
     [string]$CertStoreLocation = "\LocalMachine\My",
-    [string]$CertThumbprint = "ed 83 77 19 54 da 83 fd bb fd b9 65 85 44 7c 02 12 c3 91 ca"
+    [string]$CertThumbprint
 );
 
 
