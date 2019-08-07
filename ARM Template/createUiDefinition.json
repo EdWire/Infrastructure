@@ -1,0 +1,91 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/0.1.2-preview/CreateUIDefinition.MultiVm.json#",
+  "handler": "Microsoft.Azure.CreateUIDef",
+  "version": "0.1.2-preview",
+  "parameters": {
+    "basics": [
+      {
+        "name": "resourcePrefix",
+        "type": "Microsoft.Common.TextBox",
+        "label": "Resource Prefix",
+        "toolTip": "This prefix will be applied to every resource created as part of this template. Example: {resourcePrefix}-resourceName-{environment}-{location}.",
+        "defaultValue": "eg",
+        "constraints": {
+          "required": true
+        }
+      },
+      {
+        "name": "environment",
+        "type": "Microsoft.Common.TextBox",
+        "label": "Environment Suffix",
+        "toolTip": "This suffix will be applied to every resource created as part of this template. Example: {resourcePrefix}-resourceName-{environment}-{location}.",
+        "defaultValue": "eg",
+        "constraints": {
+          "required": true
+        }
+      }
+    ],
+    "steps": [
+      {
+        "name": "vnet",
+        "label": "Virtual Network",
+        "subLabel": {
+          "preValidation": "Configure your Virtual Network Settings",
+          "postValidation": "Done with this step... moving on to the next!"
+        },
+        "bladeTitle": "Virtual Network Settings",
+        "elements": [
+          {
+            "name": "vnetAddressSpacePrefix",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Virtual Network Address Space Prefix",
+            "toolTip": "The first two segment of the virtual network address spcae. This prefix will also be prepended to each subnet.",
+            "defaultValue": "10.10",
+            "constraints": {
+              "required": true
+            }
+          }
+        ]
+      },
+      {
+        "name": "appSettings",
+        "label": "Application settings",
+        "subLabel": {
+          "preValidation": "Configure your managed application settings",
+          "postValidation": "Done!"
+        },
+        "bladeTitle": "Settings",
+        "elements": [
+          {
+            "name": "vmPassword",
+            "type": "Microsoft.Compute.CredentialsCombo",
+            "label": {
+              "password": "Password",
+              "confirmPassword": "Confirm password"
+            },
+            "osPlatform": "Windows",
+            "constraints": {
+              "customPasswordRegex": "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,}$",
+              "customValidationMessage": "The password must contain at least 8 characters",
+              "required": true
+            },
+            "options": {
+              "hideConfirmation": false
+            },
+            "toolTip": {
+              "password": "Provide admin password for the virtual machine"
+            },
+            "visible": true
+          }
+        ]
+      }
+    ],
+    "outputs": {
+      "core": {
+        "resourcePrefix": "[steps('basics').resourcePrefix]",
+        "environment": "[steps('basics').environment]"
+      },
+      "vnetAddressSpacePrefix": "[steps('vnet').vnetAddressSpacePrefix]"
+    }
+  }
+}
