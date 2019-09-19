@@ -1,0 +1,32 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "mspName": {
+      "value": "NEFEC"
+    },
+    "rgName": {
+      "value": "edgraph-prod-eastus"
+    },
+    "mspOfferDescription": {
+      "value": "EdGraph Hybrid - Data Layer Only"
+    },
+    "managedByTenantId": {
+      "value": "[Replace this by your Azure Tenant Id]"
+    },
+    "authorizations": {
+      "value": [
+        {
+          "principalId": "[Replace this with Azure AD Object ID for the Security Group]",
+          "roleDefinitionId": "b24988ac-6180-42a0-ab88-20f7382dd24c",
+          "principalIdDisplayName": "[Replace this with Name of the Security Group]"
+        },
+        {
+          "principalId": "[Replace this with Azure AD Object ID for the Service Account]",
+          "roleDefinitionId": "b24988ac-6180-42a0-ab88-20f7382dd24c",
+          "principalIdDisplayName": "[Replace this with Name of the Service Account]"
+        }
+      ]
+    }
+  }
+}

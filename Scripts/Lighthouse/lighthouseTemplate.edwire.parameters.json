@@ -1,0 +1,32 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "mspName": {
+      "value": "EdWire Inc"
+    },
+    "rgName": {
+      "value": "edgraph-prod-eastus"
+    },
+    "mspOfferDescription": {
+      "value": "EdGraph Hybrid - Data Layer Only"
+    },
+    "managedByTenantId": {
+      "value": "a9b292af-1f66-4d76-90c6-3cbfc0cbcaf2"
+    },
+    "authorizations": {
+      "value": [
+        {
+          "principalId": "589a8c1e-756d-4f98-8ed6-ffccee8cfa1c",
+          "roleDefinitionId": "b24988ac-6180-42a0-ab88-20f7382dd24c",
+          "principalIdDisplayName": "EdWire Tier 3 Support (Azure Lighthouse)"
+        },
+        {
+          "principalId": "f1aabc6f-7966-4f26-b277-bd6463904c92",
+          "roleDefinitionId": "b24988ac-6180-42a0-ab88-20f7382dd24c",
+          "principalIdDisplayName": "EdWire Azure Automation Service"
+        }
+      ]
+    }
+  }
+}
