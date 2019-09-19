@@ -12,19 +12,19 @@
       "value": "EdGraph Hybrid - Data Layer Only"
     },
     "managedByTenantId": {
-      "value": "[Replace this by your Azure Tenant Id]"
+      "value": "75c35801-20e7-4dc0-8f49-abdbf54894be"
     },
     "authorizations": {
       "value": [
         {
-          "principalId": "[Replace this with Azure AD Object ID for the Security Group]",
+          "principalId": "8ce0dc28-cd5e-4287-9877-370afca8c060",
           "roleDefinitionId": "b24988ac-6180-42a0-ab88-20f7382dd24c",
-          "principalIdDisplayName": "[Replace this with Name of the Security Group]"
+          "principalIdDisplayName": "NEFEC-Alachua T3 Tenant Services"
         },
         {
-          "principalId": "[Replace this with Azure AD Object ID for the Service Account]",
+          "principalId": "02aeb7f5-8846-4805-a57c-bcdecf2fed9e",
           "roleDefinitionId": "b24988ac-6180-42a0-ab88-20f7382dd24c",
-          "principalIdDisplayName": "[Replace this with Name of the Service Account]"
+          "principalIdDisplayName": "NEFEC-Alachua-AutomationAccount"
         }
       ]
     }
