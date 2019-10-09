@@ -2,14 +2,14 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "mspName": {
-      "value": "NEFEC"
+    "mspOfferName": {
+      "value": "NEFEC - Human Capital Portfolio"
     },
     "rgName": {
       "value": "edgraph-prod-eastus"
     },
     "mspOfferDescription": {
-      "value": "EdGraph Hybrid - Data Layer Only"
+      "value": "Deployment of resources related to NEFEC's human capital portfolio"
     },
     "managedByTenantId": {
       "value": "75c35801-20e7-4dc0-8f49-abdbf54894be"
