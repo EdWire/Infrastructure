@@ -20,10 +20,11 @@ function SetPermissionToCertificate($userName, $permission, $certStoreLocation, 
     # download & install only if certificate is not already installed on machine
     if ($certificateInstalled -eq $null)
     {
-        $message="Certificate with thumbprint:"+$certThumbprint+" does not exist at "+$certStoreLocation
+        $message="Certificate with thumbprint: " + $certThumbprint + " does not exist at " + $certStoreLocation
         Write-Host $message -ForegroundColor Red
         exit 1;
-    }else
+    }
+    else
     {
         try
         {
