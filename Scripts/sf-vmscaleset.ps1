@@ -3,7 +3,7 @@
 #---------------------------
 
 param(
-    [switch]$PrepEleasticSearch = $false,
+    [switch]$PrepElasticSearch = $false,
     [switch]$SetPermissionToCertificate = $false,
     [string]$UserName = "Network Service",
     [string]$Permission = "full",
@@ -53,7 +53,7 @@ function SetPermissionToCertificate($userName, $permission, $certStoreLocation, 
 }
 
 
-function PrepEleasticSearch() {
+function PrepElasticSearch() {
 
     #---------------------------
     # Mount Data Drive (lun = 0)
@@ -78,32 +78,34 @@ function PrepEleasticSearch() {
 
     Write-Output "Completed Mounting Data Drive"
 
+    if ($dataDisk0)
+    {
+        #---------------------------
+        # Install Java SDK
+        #---------------------------
 
-    #---------------------------
-    # Install Java SDK
-    #---------------------------
+        Write-Output "-------------------------"
+        Write-Output "Installing Java SDK"
+        Write-Output "-------------------------"
 
-    Write-Output "-------------------------"
-    Write-Output "Installing Java SDK"
-    Write-Output "-------------------------"
+        # install chocolatey
+        Write-Output "Installing Chocolatey"
 
-    # install chocolatey
-    Write-Output "Installing Chocolatey"
+        Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 
-    Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+        # install java
+        Write-Output "Installing Java Runtime"
 
-    # install java
-    Write-Output "Installing Java Runtime"
+        choco install -y -force jre8 --version 8.0.161
 
-    choco install -y -force jre8 --version 8.0.161
-
-    Write-Output "Completed Installing Java SDK"
+        Write-Output "Completed Installing Java SDK"
+    }
 }
 
 
-if ($PrepEleasticSearch -eq $true)
+if ($PrepElasticSearch -eq $true)
 {
-    PrepEleasticSearch
+    PrepElasticSearch
 }
 
 if ($SetPermissionToCertificate -eq $true)
