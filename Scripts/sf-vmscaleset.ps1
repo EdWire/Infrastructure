@@ -1,4 +1,11 @@
 #---------------------------
+# Summary
+#---------------------------
+
+# Configure hard drive and install software required by Elastic Search 
+# Set permission for Network Service to the Data Encipherment certificate in Local Computer for access by Service Fabric cluster applications
+
+#---------------------------
 # Input Parameters
 #---------------------------
 

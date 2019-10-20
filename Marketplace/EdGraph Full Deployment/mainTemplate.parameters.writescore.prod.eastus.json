@@ -1,0 +1,115 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "core": {
+      "value": {
+        "resourcePrefix": {
+          "abbr": "ws", // 2 characters maximum
+          "shortName": "ws-eg", // 5 characters maximum
+          "name": "ws-edgraph" // 10 characters maximum
+        },
+        "environment": {
+          "abbr": "pd", // 2 characters maximum
+          "name": "prod" // 4 characters maximum
+        },
+        "templateToDeploy": {
+          "vnet": false,
+          "keyVault": false,
+          "sfCluster": false,
+          "apiManagement": false,
+          "appGateway": false,
+          "dnsZone": true,
+          "sqlServer": false,
+          "cosmosDb": false,
+          "dataBricks": false
+        },
+        "aadAdminSecurityGroupObjectId": "ab543a8d-450d-4d4b-b865-13250e1ddf95"
+      }
+    },
+    "vnet": {
+      "value": {
+        "addressSpacePrefix": "10.30"
+      }
+    },
+    "vpn": {
+      "value": {
+        "P2SRootCertName": "WSProdP2SRootCert",
+        "P2SRootCertDataPublicBase64": "MIIC8zCCAdugAwIBAgIQHiI0jtD3e59B+LzL7D3zNDANBgkqhkiG9w0BAQsFADAcMRowGAYDVQQDDBFXU1Byb2RQMlNSb290Q2VydDAeFw0xOTA4MDYwNzU4NTNaFw0yMDA4MDYwODE4NTNaMBwxGjAYBgNVBAMMEVdTUHJvZFAyU1Jvb3RDZXJ0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArgb0YNcn+CQWGa+qu58Pfpfo3q6JHaGc/lQtaLKPKj3QPT0b5QlriORL6xcfbaPlUMLnv8G5L1WYPPcqCGIxrlmIL2qq3lFAfUEEGIt6bOby/FBsdCfNxnlgsFqQ5xN9CPfh1QQHPoeKGGpTFczABzOaPJQKKLYOkJr3yk00cnaSr5OFfRXKjH9aS3TtmbKbucJuVwEhKo0cAkjW/OyRDBN2vCPIhhiUX8Ja4hkPbM3muZ1A/2VaClzwlFDpQoFLwxJi9vwDLzdQ8/3CndYufdCc0PbPr6F54zIm935SU7On9wUsvOe6OF5SMk+qjrvDS2MRJBEhlNJyzwgADZuovQIDAQABozEwLzAOBgNVHQ8BAf8EBAMCAgQwHQYDVR0OBBYEFLBkpf8UMkYvaXe0ji2JVBwRXN87MA0GCSqGSIb3DQEBCwUAA4IBAQAYIPeK6NUbV360niNgU8MrWb80qRvVyPwowAkp05afkzhufVYEaLOf5siuFcQXbWogm4aT2iP5s5HpAXYEEU46EkO+hE7QvqQtn5U3YnldPjFz8bTyMf5rjsfi1efgiLltJB0aR9iVGLuigVjLUucTEYGAufHODDC7qUoIqfjP4FF4hzFrNzi8k761F0Mjn+CHPzAYUygGi1I1U8+t+GqgPjU/9yj1jH3OFcnvdUV/5/a3ucffllVbX8aRhUBu7UWFSAWBtR/Nr4upTRY7l3ZjqztQHlNB7ZGOOD+4RDORbUpdvrCIPG9ZVur7Lfw1OMSvKFgYfgAogpY2eLjji6RW"
+      }
+    },
+    "certificates": {
+      "value": {
+        "keyVaultName": "writescore",
+        "sslCertificate": {
+          "commonName": "*.writescore.com",
+          "certificateSecretKeyVaultUrl": "https://writescore.vault.azure.net/secrets/wildcard-writescore-com/da843854a2b1446abc45e4300d9608d3"
+        },
+        "dataEnciphermentCertificate": {
+          "certificateSecretKeyVaultUrl": "https://writescore.vault.azure.net/secrets/dataencipherment-prod-service-ws/74e05187090f47639320a84a902be970"
+        }
+      }
+    },
+    "nt0vm": {
+      "value": {
+        "imagePublisher": "MicrosoftWindowsServer",
+        "imageOffer": "WindowsServer",
+        "imageSku": "2016-Datacenter-with-Containers",
+        "imageVersion": "latest",
+        "storageAccountContainerName": "vhds",
+        "sku": "Standard_D1_v2",
+        "instanceCount": 5
+      }
+    },
+    "aadApplication": {
+      "value": {
+        "aadTenantId": "b97c688d-5426-4281-b8ba-35dd8663ef3e",
+        "aadSfClusterExplorerApplicationId": "b88fdf3d-1d1a-4af3-90df-4ed42358102d",
+        "aadSfClusterClientApplicationId": "902dec4d-d223-473e-be35-484241ba513d"
+      }
+    },
+    "dnsZone": {
+      "value": {
+        "zoneName": "writescore.com",
+        "records": {
+          "root": {
+            "RecordName": "@",
+            "Enabled": false
+          },
+          "www": {
+            "RecordName": "www",
+            "Enabled": false
+          },
+          "wildcard": {
+            "RecordName": "*",
+            "Enabled": false
+          },
+          "portal": {
+            "RecordName": "portal",
+            "Enabled": false
+          },
+          "admin": {
+            "RecordName": "admin",
+            "Enabled": false
+          },
+          "login": {
+            "RecordName": "login",
+            "Enabled": false
+          },
+          "apimDeveloper": {
+            "RecordName": "developer-eastus",
+            "Enabled": false
+          },
+          "apimGateway": {
+            "RecordName": "api-eastus",
+            "Enabled": false
+          },
+          "sfCluster": {
+            "RecordName": "sf-eastus",
+            "Enabled": true
+          }
+        }
+      }
+    }
+  }
+}

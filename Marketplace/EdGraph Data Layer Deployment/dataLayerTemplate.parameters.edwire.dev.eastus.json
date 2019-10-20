@@ -1,0 +1,41 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "core": {
+      "value": {
+        "resourcePrefix": {
+          "abbr": "eg", // 2 characters maximum
+          "shortName": "eg", // 5 characters maximum
+          "name": "eg" // 10 characters maximum
+        },
+        "environment": {
+          "abbr": "dv", // 2 characters maximum
+          "name": "dev" // 4 characters maximum
+        }
+      }
+    },
+    "deployVnet": {
+      "value": true
+    },
+    "allowAzureIps": {
+      "value": false
+    },
+    "edfiDatabases": {
+      "value": {
+        "enabled": false,
+        "version": "v2.6",
+        "instanceId": "00000000-0000-0000-0000-000000000000",
+        "schoolYear": "2020"
+      }
+    },
+    "aadAdminGroup": {
+      "value": {
+        "enabled": true,
+        "login": "Azure SQL Administrators",
+        "objectId": "5cdcf5cc-6179-4766-bf5b-08f1327c6c99",
+        "tenantId": "a9b292af-1f66-4d76-90c6-3cbfc0cbcaf2"
+      }
+    }
+  }
+}

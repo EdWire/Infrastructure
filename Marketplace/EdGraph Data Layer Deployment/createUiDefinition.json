@@ -3,6 +3,10 @@
   "handler": "Microsoft.Azure.CreateUIDef",
   "version": "0.1.2-preview",
   "parameters": {
+    "resourceTypes": [
+      "Microsoft.Network/networkSecurityGroups",
+      "Microsoft.Network/virtualNetworks"
+    ],
     "basics": [
       {
         "name": "resourcePrefix",
@@ -15,7 +19,7 @@
         }
       },
       {
-        "name": "environment",
+        "name": "environmentSuffix",
         "type": "Microsoft.Common.TextBox",
         "label": "Environment Suffix",
         "toolTip": "This suffix will be applied to every resource created as part of this template. Example: {resourcePrefix}-resourceName-{environment}-{location}.",
@@ -83,7 +87,7 @@
     "outputs": {
       "core": {
         "resourcePrefix": "[steps('basics').resourcePrefix]",
-        "environment": "[steps('basics').environment]"
+        "environment": "[steps('basics').environmentSuffix]"
       },
       "vnetAddressSpacePrefix": "[steps('vnet').vnetAddressSpacePrefix]"
     }

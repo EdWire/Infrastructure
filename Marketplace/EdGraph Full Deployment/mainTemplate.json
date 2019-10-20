@@ -1,0 +1,3960 @@
+// Pre-Deployment steps
+// 1- Create SSL certificate  (parameters => certificates)
+// 2- Create Data Encipherment certificate  (parameters => certificates)
+// 3- Create Resource Group
+// 4- Create KeyVault and upload above certificates  (parameters => certificates)
+//    - Keyvault must be in same region as deployment  (parameters => certificates)
+// 5- Create Azure AD security group for Administrators  (parameters => aadAdminSecurityGroupObjectId)
+// 6- (Optional) If using VPN, create a P2SRoot and P2SChild certificate  (parameters => vpn)
+
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0001",
+  "parameters": {
+    "core": {
+      "type": "object",
+      "defaultValue": {
+        "resourcePrefix": {},
+        "environment": {},
+        "featureToDeploy": {
+          "apiManagement": false,
+          "appGateway": false,
+          "cosmosDb": false,
+          "dataBricks": false,
+          "devops": false,
+          "dnsZone": false,
+          "sfCluster": false,
+          "sqlServer": false,
+          "sqlAnalysis": false,
+          "vpn": false
+        }
+      },
+      "metadata": {
+        "description": "Configuration settings that are common to all resources."
+      }
+    },
+    // 10.10 Prod West Us
+    // 10.11 Prod South Central Us
+    // 10.12 Prod East Us
+    // 10.110 Dev West Us
+    // 10.111 Dev South Central Us
+    // 10.112 Dev East Us
+    "vnet": {
+      "type": "object",
+      "metadata": {
+        "description": "First two segment of Virtual Network Address Space."
+      }
+    },
+    "vpn": {
+      "type": "object",
+      "metadata": {
+        "description": "First two segment of Virtual Network Address Space."
+      }
+    },
+    "certificates": {
+      "type": "object",
+      "metadata": {
+        "description": "List of certificates used during various stage of the deployment"
+      }
+    },
+    "sfNodeTypes": {
+      "type": "object",
+      "metadata": {
+        "description": "Virtual machine scale set resource settings used by Service fabric Cluster"
+      }
+    },
+    "aadApplication": {
+      "type": "object",
+      "metadata": {
+        "description": "Azure Active Directory Application used to get access to Azure Resources"
+      }
+    },
+    "dnsZone": {
+      "type": "object",
+      "metadata": {
+        "description": "List of DNS that need be created"
+      }
+    },
+    "apim": {
+      "type": "object",
+      "metadata": {
+        "description": "Settings used during Azure API Management deployment"
+      }
+    },
+    "appGatewaySkuName": {
+      "type": "string",
+      "allowedValues": [
+        "Standard_Small",
+        "Standard_Medium",
+        "Standard_Large",
+        "WAF_Medium",
+        "WAF_Large",
+        "Standard_v2",
+        "WAF_v2"
+      ],
+      "defaultValue": "WAF_v2",
+      "metadata": {
+        "description": "Application Gateway Sku Name"
+      }
+    },
+    "appGatewaySkuTier": {
+      "type": "string",
+      "allowedValues": [
+        "Standard",
+        "WAF",
+        "Standard_v2",
+        "WAF_v2"
+      ],
+      "defaultValue": "WAF_v2",
+      "metadata": {
+        "description": "Application Gateway Sku Tier"
+      }
+    },
+    "appGatewayMinimumCapacity": {
+      "type": "int",
+      "defaultValue": 1,
+      "metadata": {
+        "description": "Application Gateway minimum number of instances for autoscaling"
+      }
+    },
+    "appGatewayMaximumCapacity": {
+      "type": "int",
+      "defaultValue": 5,
+      "metadata": {
+        "description": "Application Gateway maximum number of instances for autoscaling"
+      }
+    }
+  },
+  "variables": {
+    // Common
+    "locationMap": {
+      "SouthCentralUS": {
+        "Abbr": "sc",
+        "Code": "scus",
+        "Name": "South Central US"
+      },
+      "EastUS": {
+        "Abbr": "es",
+        "Code": "eastus",
+        "Name": "East US"
+      }
+    },
+    "locationObject": "[variables('locationMap')[resourceGroup().location]]",
+    "azureRegionToControlPlaneIp": {
+      "Central US": "23.101.152.95/32",
+      "East US": "23.101.152.95/32",
+      "East US 2": "23.101.152.95/32",
+      "North Central US": "23.101.152.95/32",
+      "South Central US": "40.83.178.242/32",
+      "West Central US": "40.83.178.242/32",
+      "West US": "40.83.178.242/32",
+      "West US 2": "40.83.178.242/32"
+    },
+    "azureRegionToWebappIp": {
+      "Central US": "40.70.58.221/32",
+      "East US": "40.70.58.221/32",
+      "East US 2": "40.70.58.221/32",
+      "North Central US": "40.70.58.221/32",
+      "South Central US": "40.118.174.12/32",
+      "West Central US": "40.118.174.12/32",
+      "West US": "40.118.174.12/32",
+      "West US 2": "40.118.174.12/32"
+    },
+    "controlPlaneIp": "[variables('azureRegionToControlPlaneIp')[variables('locationObject').Name]]",
+    "webappIp": "[variables('azureRegionToWebappIp')[variables('locationObject').Name]]",
+    // Virtual Network
+    "virtualNetworkName": "[concat(parameters('core').resourcePrefix.shortName, '-vnet-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "vnetAddressSpace": "[concat(parameters('vnet').addressSpacePrefix, '.0.0/16')]",
+    "vnetId": "[resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]",
+    // Subnets
+    "apimSubnetPrefix": "[concat(parameters('vnet').addressSpacePrefix, '.1.0/27')]",
+    "appGatewaySubnetPrefix": "[concat(parameters('vnet').addressSpacePrefix, '.2.0/24')]",
+    "databricksPrivateSubnetPrefix": "[concat(parameters('vnet').addressSpacePrefix, '.3.0/27')]",
+    "databricksPublicSubnetPrefix": "[concat(parameters('vnet').addressSpacePrefix, '.4.0/24')]",
+    "devopsSubnetPrefix": "[concat(parameters('vnet').addressSpacePrefix, '.5.0/26')]",
+    "sfNt0SubnetPrefix": "[concat(parameters('vnet').addressSpacePrefix, '.6.0/24')]",
+    "sfNt1SubnetPrefix": "[concat(parameters('vnet').addressSpacePrefix, '.8.0/24')]",
+    "sfNt2SubnetPrefix": "[concat(parameters('vnet').addressSpacePrefix, '.9.0/24')]",
+    "vpnSubnetPrefix": "[concat(parameters('vnet').addressSpacePrefix, '.7.0/24')]",
+    "apimSubnetName": "ApiManagementSubnet",
+    "appGatewaySubnetName": "ApplicationGatewaySubnet",
+    "databricksPrivateSubnetName": "DataBricksPrivateSubnet",
+    "databricksPublicSubnetName": "DataBricksPublicSubnet",
+    "devopsSubnetName": "DevOpsSubnet",
+    "sfNt0SubnetName": "ServiceFabricNodeType0Subnet",
+    "sfNt1SubnetName": "ServiceFabricNodeType1Subnet",
+    "sfNt2SubnetName": "ServiceFabricNodeType2Subnet",
+    "vpnSubnetName": "GatewaySubnet",
+    "sfNt0SubnetRef": "[concat(variables('vnetId'),'/subnets/', variables('sfNt0SubnetName'))]",
+    "sfNt1SubnetRef": "[concat(variables('vnetId'),'/subnets/', variables('sfNt1SubnetName'))]",
+    "sfNt2SubnetRef": "[concat(variables('vnetId'),'/subnets/', variables('sfNt2SubnetName'))]",
+    "appGatewaySubnetRef": "[concat(variables('vnetId'),'/subnets/', variables('appGatewaySubnetName'))]",
+    "devopsSubnetRef": "[concat(variables('vnetId'),'/subnets/', variables('devopsSubnetName'))]",
+    "vpnSubnetRef": "[concat(variables('vnetId'),'/subnets/', variables('vpnSubnetName'))]",
+    // NSGs
+    "apimNsgName": "[concat(parameters('core').resourcePrefix.shortName, '-apim-nsg-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "appGatewayNsgName": "[concat(parameters('core').resourcePrefix.shortName, '-appgateway-nsg-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "devopsNsgName": "[concat(parameters('core').resourcePrefix.shortName, '-devops-nsg-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "databricksNsgName": "[concat(parameters('core').resourcePrefix.shortName, '-databricks-nsg-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "sfNsgName": "[concat(parameters('core').resourcePrefix.shortName, '-sf-nsg-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    // VPN
+    "vpnSubnetId": "[concat(resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName')), '/subnets/', variables('vpnSubnetName'))]",
+    "vpnName": "[concat(parameters('core').resourcePrefix.shortName, '-vpn-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "vpnSku": "Basic",
+    "vpnPublicIpAddressName": "[concat(parameters('core').resourcePrefix.shortName, '-vpn-ip-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    // Load Balancer
+    //"internalLBIpAddress": "[concat(parameters('vnet').addressSpacePrefix, '.6.4')]",
+    "lbNt0Id": "[resourceId('Microsoft.Network/loadBalancers', variables('internalNt0LBName'))]",
+    "lbNt0PoolId": "[concat(variables('lbNt0Id'),'/backendAddressPools/LoadBalancerBEAddressPool')]",
+    "lbNt0NatPoolId": "[concat(variables('lbNt0Id'),'/inboundNatPools/LoadBalancerBEAddressNatPool')]",
+    "lbNt0RootIPConfig": "[concat(variables('lbNt0Id'),'/frontendIPConfigurations/RootIPConfig')]",
+    "lbNt0FabricGatewayProbeId": "[concat(variables('lbNt0Id'),'/probes/FabricGatewayProbe')]",
+    "lbNt0FabricHttpGatewayProbeId": "[concat(variables('lbNt0Id'),'/probes/FabricHttpGatewayProbe')]",
+    "lbNt0FabricReverseProxyProbeId": "[concat(variables('lbNt0Id'),'/probes/ReverseProxyGatewayProbe')]",
+    "lbNt0TraefikApiGatewayProbeId": "[concat(variables('lbNt0Id'),'/probes/TraefikApiGatewayProbe')]",
+    "lbNt0TraefikHttpsMarketingGatewayProbeId": "[concat(variables('lbNt0Id'),'/probes/TraefikHttpsMarketingGatewayProbe')]",
+    "lbNt0TraefikHttpsLoginGatewayProbeId": "[concat(variables('lbNt0Id'),'/probes/TraefikHttpsLoginGatewayProbe')]",
+    "lbNt0TraefikHttpsPortalGatewayProbeId": "[concat(variables('lbNt0Id'),'/probes/TraefikHttpsPortalGatewayProbe')]",
+    "lbNt0TraefikHttpsAdminGatewayProbeId": "[concat(variables('lbNt0Id'),'/probes/TraefikHttpsAdminGatewayProbe')]",
+    "lbNt0TraefikHttpsInternalGatewayProbeId": "[concat(variables('lbNt0Id'),'/probes/TraefikHttpsInternalGatewayProbe')]",
+    "lbNt1Id": "[resourceId('Microsoft.Network/loadBalancers', variables('internalNt1LBName'))]",
+    "lbNt1PoolId": "[concat(variables('lbNt1Id'),'/backendAddressPools/LoadBalancerBEAddressPool')]",
+    "lbNt1NatPoolId": "[concat(variables('lbNt1Id'),'/inboundNatPools/LoadBalancerBEAddressNatPool')]",
+    "lbNt1RootIPConfig": "[concat(variables('lbNt1Id'),'/frontendIPConfigurations/RootIPConfig')]",
+    "lbNt1FabricGatewayProbeId": "[concat(variables('lbNt1Id'),'/probes/FabricGatewayProbe')]",
+    "lbNt1FabricHttpGatewayProbeId": "[concat(variables('lbNt1Id'),'/probes/FabricHttpGatewayProbe')]",
+    "lbNt1FabricReverseProxyProbeId": "[concat(variables('lbNt1Id'),'/probes/ReverseProxyGatewayProbe')]",
+    "lbNt1TraefikApiGatewayProbeId": "[concat(variables('lbNt1Id'),'/probes/TraefikApiGatewayProbe')]",
+    "lbNt1TraefikHttpsMarketingGatewayProbeId": "[concat(variables('lbNt1Id'),'/probes/TraefikHttpsMarketingGatewayProbe')]",
+    "lbNt1TraefikHttpsLoginGatewayProbeId": "[concat(variables('lbNt1Id'),'/probes/TraefikHttpsLoginGatewayProbe')]",
+    "lbNt1TraefikHttpsPortalGatewayProbeId": "[concat(variables('lbNt1Id'),'/probes/TraefikHttpsPortalGatewayProbe')]",
+    "lbNt1TraefikHttpsAdminGatewayProbeId": "[concat(variables('lbNt1Id'),'/probes/TraefikHttpsAdminGatewayProbe')]",
+    "lbNt1TraefikHttpsInternalGatewayProbeId": "[concat(variables('lbNt1Id'),'/probes/TraefikHttpsInternalGatewayProbe')]",
+    "lbNt2Id": "[resourceId('Microsoft.Network/loadBalancers', variables('internalNt2LBName'))]",
+    "lbNt2PoolId": "[concat(variables('lbNt2Id'),'/backendAddressPools/LoadBalancerBEAddressPool')]",
+    "lbNt2NatPoolId": "[concat(variables('lbNt2Id'),'/inboundNatPools/LoadBalancerBEAddressNatPool')]",
+    "lbNt2RootIPConfig": "[concat(variables('lbNt2Id'),'/frontendIPConfigurations/RootIPConfig')]",
+    "lbNt2FabricGatewayProbeId": "[concat(variables('lbNt2Id'),'/probes/FabricGatewayProbe')]",
+    "lbNt2FabricHttpGatewayProbeId": "[concat(variables('lbNt2Id'),'/probes/FabricHttpGatewayProbe')]",
+    "lbNt2FabricReverseProxyProbeId": "[concat(variables('lbNt2Id'),'/probes/ReverseProxyGatewayProbe')]",
+    "lbNt2TraefikApiGatewayProbeId": "[concat(variables('lbNt2Id'),'/probes/TraefikApiGatewayProbe')]",
+    "lbNt2TraefikHttpsMarketingGatewayProbeId": "[concat(variables('lbNt2Id'),'/probes/TraefikHttpsMarketingGatewayProbe')]",
+    "lbNt2TraefikHttpsLoginGatewayProbeId": "[concat(variables('lbNt2Id'),'/probes/TraefikHttpsLoginGatewayProbe')]",
+    "lbNt2TraefikHttpsPortalGatewayProbeId": "[concat(variables('lbNt2Id'),'/probes/TraefikHttpsPortalGatewayProbe')]",
+    "lbNt2TraefikHttpsAdminGatewayProbeId": "[concat(variables('lbNt2Id'),'/probes/TraefikHttpsAdminGatewayProbe')]",
+    "lbNt2TraefikHttpsInternalGatewayProbeId": "[concat(variables('lbNt2Id'),'/probes/TraefikHttpsInternalGatewayProbe')]",
+    // Service Fabric
+    "supportLogStorageAccountName": "[toLower(concat(replace(parameters('core').resourcePrefix.shortName,'-', ''), 'sflogs', parameters('core').environment.name, variables('locationObject').Code))]",
+    "applicationDiagnosticsStorageAccountName": "[toLower(concat(replace(parameters('core').resourcePrefix.shortName,'-', ''), 'sfdiag', parameters('core').environment.name, variables('locationObject').Code))]",
+    "appStorageAccountName": "[toLower(concat(replace(parameters('core').resourcePrefix.shortName,'-', ''), 'appstorage', parameters('core').environment.name, variables('locationObject').Code))]",
+    "omsWorkspacename": "[concat(parameters('core').resourcePrefix.shortName, '-omsworkspace-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "internalNt0LBName": "[concat(parameters('core').resourcePrefix.shortName, '-lb-internal-nt0-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "internalNt1LBName": "[concat(parameters('core').resourcePrefix.shortName, '-lb-internal-nt1-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "internalNt2LBName": "[concat(parameters('core').resourcePrefix.shortName, '-lb-internal-nt2-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "nt0VmName": "[concat('sf', parameters('core').environment.abbr, variables('locationObject').Abbr, '0')]",
+    "nt0VmNicName": "[concat(variables('nt0VmName') ,'-nic')]",
+    "nt1VmName": "[concat('sf', parameters('core').environment.abbr, variables('locationObject').Abbr, '1')]",
+    "nt1VmNicName": "[concat(variables('nt1VmName') ,'-nic')]",
+    "nt2VmName": "[concat('sf', parameters('core').environment.abbr, variables('locationObject').Abbr, '2')]",
+    "nt2VmNicName": "[concat(variables('nt2VmName') ,'-nic')]",
+    "ntapplicationStartPort": 20000,
+    "ntapplicationEndPort": 30000,
+    "ntephemeralStartPort": 49152,
+    "ntephemeralEndPort": 65534,
+    "ntfabricTcpGatewayPort": 19000,
+    "ntfabricHttpGatewayPort": 19080,
+    "ntreverseProxyEndpointPort": 19081,
+    "vmssAdminUserName": "egvmadmin",
+    "vmssAdminPassword": "[concat(uniqueString(subscription().subscriptionId), '!')]",
+    "sfClusterName": "[concat(parameters('core').resourcePrefix.shortName, '-sf-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "sfClusterMangementEndpoint": "[concat('https://', parameters('dnsZone').sfClusterDns, '.', parameters('dnsZone').zoneName, ':19080')]",
+    // App Gateway
+    "appGatewayName": "[concat(parameters('core').resourcePrefix.shortName, '-appgateway-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "appGatewayDnsName": "[concat(parameters('core').resourcePrefix.shortName, '-appgateway-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "appGatewayIPName": "[concat(parameters('core').resourcePrefix.shortName, '-appgateway-ip-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "appGatewayID": "[resourceId('Microsoft.Network/applicationGateways', variables('appGatewayName'))]",
+    "appGatewayCertificateSslName": "[concat('wildcard.', parameters('dnsZone').zoneName)]",
+    "appGatewayKeyVaultIdentity": "[concat(parameters('core').resourcePrefix.shortName, '-appgateway-identity-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    // API Management
+    "apimInstanceName": "[concat(parameters('core').resourcePrefix.shortName, '-apim-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "apimSubnetId": "[concat(resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName')), '/subnets/', variables('apimSubnetName'))]",
+    // Cosmos DB
+    "cosmosdbServerName": "[concat(parameters('core').resourcePrefix.shortName, '-cosmos-', parameters('core').environment.name, '-global')]",
+    "apimSubnetId": "[concat(resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName')), '/subnets/', variables('apimSubnetName'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2018-12-01",
+      "name": "[variables('apimNsgName')]",
+      "location": "[variables('locationObject').Name]",
+      "dependsOn": [],
+      "properties": {
+        "securityRules": [
+          {
+            "name": "Client_communication_to_API_Management",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "80",
+              "sourceAddressPrefix": "VirtualNetwork",
+              "destinationAddressPrefix": "VirtualNetwork",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "Secure_Client_communication_to_API_Management",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "443",
+              "sourceAddressPrefix": "VirtualNetwork",
+              "destinationAddressPrefix": "VirtualNetwork",
+              "access": "Allow",
+              "priority": 110,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "Management_endpoint_for_Azure_portal_and_Powershell",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3443",
+              "sourceAddressPrefix": "ApiManagement",
+              "destinationAddressPrefix": "VirtualNetwork",
+              "access": "Allow",
+              "priority": 120,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "Dependency_on_Redis_Cache",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "6381-6383",
+              "sourceAddressPrefix": "VirtualNetwork",
+              "destinationAddressPrefix": "VirtualNetwork",
+              "access": "Allow",
+              "priority": 130,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "Dependency_on_Azure_SQL",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "1433",
+              "sourceAddressPrefix": "VirtualNetwork",
+              "destinationAddressPrefix": "Sql",
+              "access": "Allow",
+              "priority": 140,
+              "direction": "Outbound"
+            }
+          },
+          {
+            "name": "Dependency_for_Log_to_event_Hub_policy",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "5671",
+              "sourceAddressPrefix": "VirtualNetwork",
+              "destinationAddressPrefix": "EventHub",
+              "access": "Allow",
+              "priority": 150,
+              "direction": "Outbound"
+            }
+          },
+          {
+            "name": "Dependency_on_Redis_Cache_outbound",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "6381-6383",
+              "sourceAddressPrefix": "VirtualNetwork",
+              "destinationAddressPrefix": "VirtualNetwork",
+              "access": "Allow",
+              "priority": 160,
+              "direction": "Outbound"
+            }
+          },
+          {
+            "name": "Dependency_on_Azure_File_Share_for_GIT",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "445",
+              "sourceAddressPrefix": "VirtualNetwork",
+              "destinationAddressPrefix": "Storage",
+              "access": "Allow",
+              "priority": 170,
+              "direction": "Outbound"
+            }
+          },
+          {
+            "name": "Azure_Infrastructure_Load_Balancer",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "AzureLoadBalancer",
+              "destinationAddressPrefix": "VirtualNetwork",
+              "access": "Allow",
+              "priority": 180,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "Publish_DiagnosticLogs_And_Metrics",
+            "properties": {
+              "description": "APIM Logs and Metrics for consumption by admins and your IT team are all part of the management plane",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "sourceAddressPrefix": "VirtualNetwork",
+              "destinationAddressPrefix": "AzureMonitor",
+              "access": "Allow",
+              "priority": 185,
+              "direction": "Outbound",
+              "destinationPortRanges": [
+                "443",
+                "12000",
+                "1886"
+              ]
+            }
+          },
+          {
+            "name": "Connect_To_SMTP_Relay_For_SendingEmails",
+            "properties": {
+              "description": "APIM features the ability to generate email traffic as part of the data plane and the management plane",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "sourceAddressPrefix": "VirtualNetwork",
+              "destinationAddressPrefix": "Internet",
+              "access": "Allow",
+              "priority": 190,
+              "direction": "Outbound",
+              "destinationPortRanges": [
+                "25",
+                "587",
+                "25028"
+              ]
+            }
+          },
+          {
+            "name": "Authenticate_To_Azure_Active_Directory",
+            "properties": {
+              "description": "Connect to Azure Active Directory for Developer Portal Authentication or for Oauth2 flow during any Proxy Authentication",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "sourceAddressPrefix": "VirtualNetwork",
+              "destinationAddressPrefix": "AzureActiveDirectory",
+              "access": "Allow",
+              "priority": 200,
+              "direction": "Outbound",
+              "destinationPortRanges": [
+                "80",
+                "443"
+              ]
+            }
+          },
+          {
+            "name": "Dependency_on_Azure_Storage",
+            "properties": {
+              "description": "APIM service dependency on Azure Blob and Azure Table Storage",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "443",
+              "sourceAddressPrefix": "VirtualNetwork",
+              "destinationAddressPrefix": "Storage",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Outbound"
+            }
+          },
+          {
+            "name": "Publish_Monitoring_Logs",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "443",
+              "sourceAddressPrefix": "VirtualNetwork",
+              "destinationAddressPrefix": "AzureCloud",
+              "access": "Allow",
+              "priority": 300,
+              "direction": "Outbound"
+            }
+          },
+          {
+            "name": "Deny_All_Internet_Outbound",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "VirtualNetwork",
+              "destinationAddressPrefix": "Internet",
+              "access": "Deny",
+              "priority": 999,
+              "direction": "Outbound"
+            }
+          }
+        ]
+      },
+      "tags": {
+        "Scope": "EdGraph",
+        "Type": "Infrastructure"
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2018-12-01",
+      "name": "[variables('appGatewayNsgName')]",
+      "location": "[variables('locationObject').Name]",
+      "dependsOn": [],
+      "properties": {
+        "securityRules": [
+          {
+            "name": "Allow_AppGW_Frontend_Https_Traffic",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "443",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "Allow_AppGW_Frontend_Http_Traffic",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "80",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 110,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "Allow_Azure_Infrastructure",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "65200-65535",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 120,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      },
+      "tags": {
+        "Scope": "EdGraph",
+        "Type": "Infrastructure"
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2018-12-01",
+      "name": "[variables('databricksNsgName')]",
+      "location": "[variables('locationObject').Name]",
+      "dependsOn": [],
+      "properties": {
+        "securityRules": [
+          {
+            "name": "databricks-worker-to-worker",
+            "properties": {
+              "access": "Allow",
+              "description": "Required for worker nodes communication within a cluster.",
+              "destinationAddressPrefix": "*",
+              "destinationPortRange": "*",
+              "direction": "Inbound",
+              "priority": 200,
+              "protocol": "*",
+              "sourceAddressPrefix": "VirtualNetwork",
+              "sourcePortRange": "*"
+            }
+          },
+          {
+            "name": "databricks-control-plane-ssh",
+            "properties": {
+              "access": "Allow",
+              "description": "Required for Databricks control plane management of worker nodes.",
+              "destinationAddressPrefix": "*",
+              "destinationPortRange": "22",
+              "direction": "Inbound",
+              "priority": 100,
+              "protocol": "*",
+              "sourceAddressPrefix": "[variables('controlPlaneIp')]",
+              "sourcePortRange": "*"
+            }
+          },
+          {
+            "name": "databricks-control-plane-worker-proxy",
+            "properties": {
+              "access": "Allow",
+              "description": "Required for Databricks control plane communication with worker nodes.",
+              "destinationAddressPrefix": "*",
+              "destinationPortRange": "5557",
+              "direction": "Inbound",
+              "priority": 110,
+              "protocol": "*",
+              "sourceAddressPrefix": "[variables('controlPlaneIp')]",
+              "sourcePortRange": "*"
+            }
+          },
+          {
+            "name": "databricks-worker-to-webapp",
+            "properties": {
+              "access": "Allow",
+              "description": "Required for workers communication with Databricks Webapp.",
+              "destinationAddressPrefix": "[variables('webappIp')]",
+              "destinationPortRange": "*",
+              "direction": "Outbound",
+              "priority": 100,
+              "protocol": "*",
+              "sourceAddressPrefix": "*",
+              "sourcePortRange": "*"
+            }
+          },
+          {
+            "name": "databricks-worker-to-sql",
+            "properties": {
+              "access": "Allow",
+              "description": "Required for workers communication with Azure SQL services.",
+              "destinationAddressPrefix": "Sql",
+              "destinationPortRange": "*",
+              "direction": "Outbound",
+              "priority": 110,
+              "protocol": "*",
+              "sourceAddressPrefix": "*",
+              "sourcePortRange": "*"
+            }
+          },
+          {
+            "name": "databricks-worker-to-storage",
+            "properties": {
+              "access": "Allow",
+              "description": "Required for workers communication with Azure Storage services.",
+              "destinationAddressPrefix": "Storage",
+              "destinationPortRange": "*",
+              "direction": "Outbound",
+              "priority": 120,
+              "protocol": "*",
+              "sourceAddressPrefix": "*",
+              "sourcePortRange": "*"
+            }
+          },
+          {
+            "name": "databricks-worker-to-worker-outbound",
+            "properties": {
+              "access": "Allow",
+              "description": "Required for worker nodes communication within a cluster.",
+              "destinationAddressPrefix": "VirtualNetwork",
+              "destinationPortRange": "*",
+              "direction": "Outbound",
+              "priority": 130,
+              "protocol": "*",
+              "sourceAddressPrefix": "*",
+              "sourcePortRange": "*"
+            }
+          },
+          {
+            "name": "databricks-worker-to-any",
+            "properties": {
+              "access": "Allow",
+              "description": "Required for worker nodes communication with any destination.",
+              "destinationAddressPrefix": "*",
+              "destinationPortRange": "*",
+              "direction": "Outbound",
+              "priority": 140,
+              "protocol": "*",
+              "sourceAddressPrefix": "*",
+              "sourcePortRange": "*"
+            }
+          }
+        ]
+      },
+      "tags": {
+        "Scope": "EdGraph",
+        "Type": "Infrastructure"
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2018-12-01",
+      "name": "[variables('devopsNsgName')]",
+      "location": "[variables('locationObject').Name]",
+      "dependsOn": [],
+      "properties": {
+        "securityRules": [
+        ]
+      },
+      "tags": {
+        "Scope": "EdGraph",
+        "Type": "Infrastructure"
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2018-12-01",
+      "name": "[variables('sfNsgName')]",
+      "location": "[variables('locationObject').Name]",
+      "dependsOn": [],
+      "properties": {
+        "securityRules": [
+        ]
+      },
+      "tags": {
+        "Scope": "EdGraph",
+        "Type": "Infrastructure"
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2018-12-01",
+      "name": "[variables('virtualNetworkName')]",
+      "location": "[variables('locationObject').Name]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkSecurityGroups/', variables('apimNsgName'))]",
+        "[concat('Microsoft.Network/networkSecurityGroups/', variables('appGatewayNsgName'))]",
+        "[concat('Microsoft.Network/networkSecurityGroups/', variables('sfNsgName'))]",
+        "[concat('Microsoft.Network/networkSecurityGroups/', variables('devopsNsgName'))]",
+        "[concat('Microsoft.Network/networkSecurityGroups/', variables('databricksNsgName'))]"
+      ],
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('vnetAddressSpace')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('apimSubnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('apimSubnetPrefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('apimNsgName'))]"
+              }
+            }
+          },
+          {
+            "name": "[variables('appGatewaySubnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('appGatewaySubnetPrefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('appGatewayNsgName'))]"
+              }
+            }
+          },
+          {
+            "name": "[variables('databricksPrivateSubnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('databricksPrivateSubnetPrefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('databricksNsgName'))]"
+              },
+              "serviceEndpoints": [
+                {
+                  "service": "Microsoft.Sql"
+                }
+              ]
+            }
+          },
+          {
+            "name": "[variables('databricksPublicSubnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('databricksPublicSubnetPrefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('databricksNsgName'))]"
+              },
+              "serviceEndpoints": [
+                {
+                  "service": "Microsoft.Sql"
+                }
+              ]
+            }
+          },
+          {
+            "name": "[variables('devopsSubnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('devopsSubnetPrefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('devopsNsgName'))]"
+              },
+              "serviceEndpoints": [
+                {
+                  "service": "Microsoft.Sql"
+                },
+                {
+                  "service": "Microsoft.AzureCosmosDB"
+                }
+              ]
+            }
+          },
+          {
+            "name": "[variables('sfNt0SubnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('sfNt0SubnetPrefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('sfNsgName'))]"
+              },
+              "serviceEndpoints": [
+                {
+                  "service": "Microsoft.Sql"
+                },
+                {
+                  "service": "Microsoft.AzureCosmosDB"
+                }
+              ]
+            }
+          },
+          {
+            "name": "[variables('sfNt1SubnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('sfNt1SubnetPrefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('sfNsgName'))]"
+              },
+              "serviceEndpoints": [
+                {
+                  "service": "Microsoft.Sql"
+                },
+                {
+                  "service": "Microsoft.AzureCosmosDB"
+                }
+              ]
+            }
+          },
+          {
+            "name": "[variables('sfNt2SubnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('sfNt2SubnetPrefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('sfNsgName'))]"
+              },
+              "serviceEndpoints": [
+                {
+                  "service": "Microsoft.Sql"
+                },
+                {
+                  "service": "Microsoft.AzureCosmosDB"
+                }
+              ]
+            }
+          },
+          {
+            "name": "[variables('vpnSubnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('vpnSubnetPrefix')]",
+              "serviceEndpoints": [
+                {
+                  "service": "Microsoft.Sql"
+                },
+                {
+                  "service": "Microsoft.AzureCosmosDB"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "tags": {
+        "Scope": "EdGraph",
+        "Type": "Infrastructure"
+      }
+    },
+    {
+      "condition": "[parameters('core').featureToDeploy.vpn]",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2018-12-01",
+      "name": "[variables('vpnPublicIpAddressName')]",
+      "location": "[variables('locationObject').Name]",
+      "dependsOn": [],
+      "properties": {
+        "publicIPAllocationMethod": "Dynamic"
+      },
+      "tags": {
+        "Scope": "EdGraph",
+        "Type": "Infrastructure"
+      }
+    },
+    {
+      "condition": "[parameters('core').featureToDeploy.vpn]",
+      "type": "Microsoft.Network/virtualNetworkGateways",
+      "apiVersion": "2018-12-01",
+      "name": "[variables('vpnName')]",
+      "location": "[variables('locationObject').Name]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
+        "[concat('Microsoft.Network/publicIPAddresses/', variables('vpnPublicIpAddressName'))]"
+      ],
+      "properties": {
+        "gatewayType": "Vpn",
+        "ipConfigurations": [
+          {
+            "name": "default",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[variables('vpnSubnetId')]"
+              },
+              "publicIpAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('vpnPublicIpAddressName'))]"
+              }
+            }
+          }
+        ],
+        "vpnType": "RouteBased",
+        "sku": {
+          "name": "[variables('vpnSku')]",
+          "tier": "[variables('vpnSku')]",
+          "capacity": 2
+        },
+        "enableBgp": false,
+        "activeActive": false,
+        "vpnClientConfiguration": {
+          "vpnClientAddressPool": {
+            "addressPrefixes": [
+              "172.16.201.0/24"
+            ]
+          },
+          "vpnClientProtocols": [
+            "SSTP"
+          ],
+          "vpnClientRootCertificates": [
+            {
+              "name": "[parameters('vpn').P2SRootCertName]",
+              "properties": {
+                "publicCertData": "[parameters('vpn').P2SRootCertDataPublicBase64]"
+              }
+            }
+          ],
+          "vpnClientRevokedCertificates": [],
+          "vpnClientIpsecPolicies": []
+        }
+      },
+      "tags": {
+        "Scope": "EdGraph",
+        "Type": "Infrastructure"
+      }
+    },
+    //{
+    //  "type": "Microsoft.KeyVault/vaults",
+    //  "apiVersion": "2018-02-14",
+    //  "name": "[parameters('certificates').keyVaultName]",
+    //  "location": "[variables('locationObject').Name]",
+    //  "dependsOn": [],
+    //  "properties": {
+    //    "enabledForDeployment": true,
+    //    "enabledForTemplateDeployment": true,
+    //    "enableSoftDelete": true,
+    //    "tenantId": "[subscription().TenantId]",
+    //    "accessPolicies": [],
+    //    "sku": {
+    //      "name": "standard",
+    //      "family": "A"
+    //    },
+    //    "networkAcls": {
+    //      "value": {
+    //        "defaultAction": "Allow",
+    //        "bypass": "AzureServices"
+    //      }
+    //    }
+    //  },
+    //  "tags": {
+    //    "Scope": "EdGraph",
+    //    "Type": "Service Fabric"
+    //  }
+    //},
+    {
+      "type": "Microsoft.KeyVault/vaults/accessPolicies",
+      "apiVersion": "2018-02-14",
+      "name": "[concat(parameters('certificates').keyVaultName, '/add')]",
+      "dependsOn": [],
+      "properties": {
+        "accessPolicies": [
+          {
+            "objectId": "[parameters('core').aadAdminSecurityGroupObjectId]",
+            "tenantId": "[subscription().TenantId]",
+            "permissions": {
+              "secrets": [ "get", "list", "set", "delete", "backup", "restore", "recover", "purge" ],
+              "certificates": [ "get", "list", "delete", "create", "import", "update", "managecontacts", "getissuers", "listissuers", "setissuers", "deleteissuers", "manageissuers", "recover", "purge", "backup", "restore" ]
+            }
+          },
+          {
+            "objectId": "[reference(concat('Microsoft.ManagedIdentity/userAssignedIdentities/', variables('appGatewayKeyVaultIdentity')), '2018-11-30').principalId]",
+            "tenantId": "[subscription().TenantId]",
+            "permissions": {
+              "secrets": [ "get" ]
+            }
+          },
+          {
+            "objectId": "[reference(concat(resourceId('Microsoft.Compute/virtualMachineScaleSets', variables('nt0VmName')), '/providers/Microsoft.ManagedIdentity/Identities/default'), '2018-11-30').principalId]",
+            "tenantId": "[subscription().TenantId]",
+            "permissions": {
+              "secrets": [ "get", "list", "set", "delete" ]
+            }
+          },
+          {
+            "objectId": "[reference(concat(resourceId('Microsoft.Compute/virtualMachineScaleSets', variables('nt1VmName')), '/providers/Microsoft.ManagedIdentity/Identities/default'), '2018-11-30').principalId]",
+            "tenantId": "[subscription().TenantId]",
+            "permissions": {
+              "secrets": [ "get", "list", "set", "delete" ]
+            }
+          },
+          {
+            "objectId": "[reference(concat(resourceId('Microsoft.Compute/virtualMachineScaleSets', variables('nt2VmName')), '/providers/Microsoft.ManagedIdentity/Identities/default'), '2018-11-30').principalId]",
+            "tenantId": "[subscription().TenantId]",
+            "permissions": {
+              "secrets": [ "get", "list", "set", "delete" ]
+            }
+          },
+          {
+            "objectId": "[reference(concat(resourceId('Microsoft.ApiManagement/service', variables('apimInstanceName')), '/providers/Microsoft.ManagedIdentity/Identities/default'), '2018-11-30').principalId]",
+            "tenantId": "[subscription().TenantId]",
+            "permissions": {
+              "secrets": [
+                "get"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2018-02-14",
+      "name": "[concat(parameters('certificates').keyVaultName, '/', 'VMSS--Admin--Username')]",
+      "dependsOn": [],
+      "properties": {
+        "value": "[variables('vmssAdminUserName')]"
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2018-02-14",
+      "name": "[concat(parameters('certificates').keyVaultName, '/', 'VMSS--Admin--Password')]",
+      "dependsOn": [],
+      "properties": {
+        "value": "[variables('vmssAdminPassword')]"
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2019-04-01",
+      "name": "[variables('supportLogStorageAccountName')]",
+      "location": "[variables('locationObject').Name]",
+      "dependsOn": [],
+      "properties": {
+        "supportsHttpsTrafficOnly": true
+      },
+      "kind": "Storage",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "tags": {
+        "Scope": "EdGraph",
+        "Type": "Service Fabric"
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2019-04-01",
+      "name": "[variables('applicationDiagnosticsStorageAccountName')]",
+      "location": "[variables('locationObject').Name]",
+      "dependsOn": [],
+      "properties": {
+        "supportsHttpsTrafficOnly": true
+      },
+      "kind": "Storage",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "tags": {
+        "Scope": "EdGraph",
+        "Type": "Service Fabric"
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2019-04-01",
+      "name": "[variables('appStorageAccountName')]",
+      "location": "[variables('locationObject').Name]",
+      "dependsOn": [],
+      "kind": "StorageV2",
+      "sku": {
+        "name": "Standard_LRS",
+        "tier": "Standard"
+      },
+      "properties": {
+        "networkAcls": {
+          "bypass": "AzureServices",
+          "virtualNetworkRules": [],
+          "ipRules": [],
+          "defaultAction": "Allow"
+        },
+        "supportsHttpsTrafficOnly": true,
+        "encryption": {
+          "services": {
+            "file": {
+              "enabled": true
+            },
+            "blob": {
+              "enabled": true
+            }
+          },
+          "keySource": "Microsoft.Storage"
+        },
+        "accessTier": "Cool"
+      },
+      "tags": {
+        "Scope": "EdGraph",
+        "Type": "Service Fabric"
+      }
+    },
+    {
+      "type": "Microsoft.Network/loadBalancers",
+      "apiVersion": "2019-04-01",
+      "name": "[variables('internalNt0LBName')]",
+      "location": "[variables('locationObject').Name]",
+      "dependsOn": [],
+      "properties": {
+        "frontendIPConfigurations": [
+          {
+            "name": "RootIPConfig",
+            "properties": {
+              "subnet": {
+                "id": "[variables('sfNt0SubnetRef')]"
+              },
+              //"privateIPAddress": "[variables('internalLBIpAddress')]",
+              "privateIPAllocationMethod": "Dynamic"
+            }
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "LoadBalancerBEAddressPool",
+            "properties": {}
+          }
+        ],
+        "loadBalancingRules": [
+          {
+            "name": "FabricGatewayLBRule",
+            "properties": {
+              "backendAddressPool": {
+                "id": "[variables('lbNt0PoolId')]"
+              },
+              "backendPort": "[variables('ntfabricTcpGatewayPort')]",
+              "enableFloatingIP": false,
+              "frontendIPConfiguration": {
+                "id": "[variables('lbNt0RootIPConfig')]"
+              },
+              "frontendPort": "[variables('ntfabricTcpGatewayPort')]",
+              "idleTimeoutInMinutes": 5,
+              "probe": {
+                "id": "[variables('lbNt0FabricGatewayProbeId')]"
+              },
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "FabricHttpGatewayLBRule",
+            "properties": {
+              "backendAddressPool": {
+                "id": "[variables('lbNt0PoolId')]"
+              },
+              "backendPort": "[variables('ntfabricHttpGatewayPort')]",
+              "enableFloatingIP": false,
+              "frontendIPConfiguration": {
+                "id": "[variables('lbNt0RootIPConfig')]"
+              },
+              "frontendPort": "[variables('ntfabricHttpGatewayPort')]",
+              "idleTimeoutInMinutes": 5,
+              "probe": {
+                "id": "[variables('lbNt0FabricHttpGatewayProbeId')]"
+              },
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "FabricReverseProxyGatewayLBRule",
+            "properties": {
+              "backendAddressPool": {
+                "id": "[variables('lbNt0PoolId')]"
+              },
+              "backendPort": "[variables('ntreverseProxyEndpointPort')]",
+              "enableFloatingIP": false,
+              "frontendIPConfiguration": {
+                "id": "[variables('lbNt0RootIPConfig')]"
+              },
+              "frontendPort": "[variables('ntreverseProxyEndpointPort')]",
+              "idleTimeoutInMinutes": 5,
+              "probe": {
+                "id": "[variables('lbNt0FabricReverseProxyProbeId')]"
+              },
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "TraefikApiGatewayLBRule",
+            "properties": {
+              "backendAddressPool": {
+                "id": "[variables('lbNt0PoolId')]"
+              },
+              "backendPort": 44380,
+              "enableFloatingIP": false,
+              "frontendIPConfiguration": {
+                "id": "[variables('lbNt0RootIPConfig')]"
+              },
+              "frontendPort": 44380,
+              "idleTimeoutInMinutes": 5,
+              "probe": {
+                "id": "[variables('lbNt0TraefikApiGatewayProbeId')]"
+              },
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "TraefikHttpsMarketingGatewayLBRule",
+            "properties": {
+              "backendAddressPool": {
+                "id": "[variables('lbNt0PoolId')]"
+              },
+              "backendPort": 44300,
+              "enableFloatingIP": false,
+              "frontendIPConfiguration": {
+                "id": "[variables('lbNt0RootIPConfig')]"
+              },
+              "frontendPort": 44300,
+              "idleTimeoutInMinutes": 5,
+              "probe": {
+                "id": "[variables('lbNt0TraefikHttpsMarketingGatewayProbeId')]"
+              },
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "TraefikHttpsLoginGatewayLBRule",
+            "properties": {
+              "backendAddressPool": {
+                "id": "[variables('lbNt0PoolId')]"
+              },
+              "backendPort": 44301,
+              "enableFloatingIP": false,
+              "frontendIPConfiguration": {
+                "id": "[variables('lbNt0RootIPConfig')]"
+              },
+              "frontendPort": 44301,
+              "idleTimeoutInMinutes": 5,
+              "probe": {
+                "id": "[variables('lbNt0TraefikHttpsLoginGatewayProbeId')]"
+              },
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "TraefikHttpsPortalGatewayLBRule",
+            "properties": {
+              "backendAddressPool": {
+                "id": "[variables('lbNt0PoolId')]"
+              },
+              "backendPort": 44302,
+              "enableFloatingIP": false,
+              "frontendIPConfiguration": {
+                "id": "[variables('lbNt0RootIPConfig')]"
+              },
+              "frontendPort": 44302,
+              "idleTimeoutInMinutes": 5,
+              "probe": {
+                "id": "[variables('lbNt0TraefikHttpsPortalGatewayProbeId')]"
+              },
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "TraefikHttpsAdminGatewayLBRule",
+            "properties": {
+              "backendAddressPool": {
+                "id": "[variables('lbNt0PoolId')]"
+              },
+              "backendPort": 44303,
+              "enableFloatingIP": false,
+              "frontendIPConfiguration": {
+                "id": "[variables('lbNt0RootIPConfig')]"
+              },
+              "frontendPort": 44303,
+              "idleTimeoutInMinutes": 5,
+              "probe": {
+                "id": "[variables('lbNt0TraefikHttpsAdminGatewayProbeId')]"
+              },
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "TraefikHttpsInternalGatewayLBRule",
+            "properties": {
+              "backendAddressPool": {
+                "id": "[variables('lbNt0PoolId')]"
+              },
+              "backendPort": 44399,
+              "enableFloatingIP": false,
+              "frontendIPConfiguration": {
+                "id": "[variables('lbNt0RootIPConfig')]"
+              },
+              "frontendPort": 44399,
+              "idleTimeoutInMinutes": 5,
+              "probe": {
+                "id": "[variables('lbNt0TraefikHttpsInternalGatewayProbeId')]"
+              },
+              "protocol": "Tcp"
+            }
+          }
+        ],
+        "probes": [
+          {
+            "name": "FabricGatewayProbe",
+            "properties": {
+              "intervalInSeconds": 5,
+              "numberOfProbes": 2,
+              "port": "[variables('ntfabricTcpGatewayPort')]",
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "FabricHttpGatewayProbe",
+            "properties": {
+              "intervalInSeconds": 5,
+              "numberOfProbes": 2,
+              "port": "[variables('ntfabricHttpGatewayPort')]",
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "ReverseProxyGatewayProbe",
+            "properties": {
+              "intervalInSeconds": 5,
+              "numberOfProbes": 2,
+              "port": "[variables('ntreverseProxyEndpointPort')]",
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "TraefikApiGatewayProbe",
+            "properties": {
+              "intervalInSeconds": 5,
+              "numberOfProbes": 2,
+              "port": 44380,
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "TraefikHttpsMarketingGatewayProbe",
+            "properties": {
+              "intervalInSeconds": 5,
+              "numberOfProbes": 2,
+              "port": 44300,
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "TraefikHttpsLoginGatewayProbe",
+            "properties": {
+              "intervalInSeconds": 5,
+              "numberOfProbes": 2,
+              "port": 44301,
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "TraefikHttpsPortalGatewayProbe",
+            "properties": {
+              "intervalInSeconds": 5,
+              "numberOfProbes": 2,
+              "port": 44302,
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "TraefikHttpsAdminGatewayProbe",
+            "properties": {
+              "intervalInSeconds": 5,
+              "numberOfProbes": 2,
+              "port": 44303,
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "TraefikHttpsInternalGatewayProbe",
+            "properties": {
+              "intervalInSeconds": 5,
+              "numberOfProbes": 2,
+              "port": 44399,
+              "protocol": "Tcp"
+            }
+          }
+        ],
+        "inboundNatPools": [
+          {
+            "name": "LoadBalancerBEAddressNatPool",
+            "properties": {
+              "backendPort": 3389,
+              "frontendIPConfiguration": {
+                "id": "[variables('lbNt0RootIPConfig')]"
+              },
+              "frontendPortRangeEnd": 4500,
+              "frontendPortRangeStart": 3389,
+              "protocol": "Tcp"
+            }
+          }
+        ]
+      },
+      "tags": {
+        "Scope": "EdGraph",
+        "Type": "Service Fabric"
+      }
+    },
+    {
+      "type": "Microsoft.Network/loadBalancers",
+      "apiVersion": "2019-04-01",
+      "name": "[variables('internalNt1LBName')]",
+      "location": "[variables('locationObject').Name]",
+      "dependsOn": [],
+      "properties": {
+        "frontendIPConfigurations": [
+          {
+            "name": "RootIPConfig",
+            "properties": {
+              "subnet": {
+                "id": "[variables('sfNt1SubnetRef')]"
+              },
+              //"privateIPAddress": "[variables('internalLBIpAddress')]",
+              "privateIPAllocationMethod": "Dynamic"
+            }
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "LoadBalancerBEAddressPool",
+            "properties": {}
+          }
+        ],
+        "loadBalancingRules": [
+          {
+            "name": "FabricGatewayLBRule",
+            "properties": {
+              "backendAddressPool": {
+                "id": "[variables('lbNt1PoolId')]"
+              },
+              "backendPort": "[variables('ntfabricTcpGatewayPort')]",
+              "enableFloatingIP": false,
+              "frontendIPConfiguration": {
+                "id": "[variables('lbNt1RootIPConfig')]"
+              },
+              "frontendPort": "[variables('ntfabricTcpGatewayPort')]",
+              "idleTimeoutInMinutes": 5,
+              "probe": {
+                "id": "[variables('lbNt1FabricGatewayProbeId')]"
+              },
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "FabricHttpGatewayLBRule",
+            "properties": {
+              "backendAddressPool": {
+                "id": "[variables('lbNt1PoolId')]"
+              },
+              "backendPort": "[variables('ntfabricHttpGatewayPort')]",
+              "enableFloatingIP": false,
+              "frontendIPConfiguration": {
+                "id": "[variables('lbNt1RootIPConfig')]"
+              },
+              "frontendPort": "[variables('ntfabricHttpGatewayPort')]",
+              "idleTimeoutInMinutes": 5,
+              "probe": {
+                "id": "[variables('lbNt1FabricHttpGatewayProbeId')]"
+              },
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "FabricReverseProxyGatewayLBRule",
+            "properties": {
+              "backendAddressPool": {
+                "id": "[variables('lbNt1PoolId')]"
+              },
+              "backendPort": "[variables('ntreverseProxyEndpointPort')]",
+              "enableFloatingIP": false,
+              "frontendIPConfiguration": {
+                "id": "[variables('lbNt1RootIPConfig')]"
+              },
+              "frontendPort": "[variables('ntreverseProxyEndpointPort')]",
+              "idleTimeoutInMinutes": 5,
+              "probe": {
+                "id": "[variables('lbNt1FabricReverseProxyProbeId')]"
+              },
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "TraefikApiGatewayLBRule",
+            "properties": {
+              "backendAddressPool": {
+                "id": "[variables('lbNt1PoolId')]"
+              },
+              "backendPort": 44380,
+              "enableFloatingIP": false,
+              "frontendIPConfiguration": {
+                "id": "[variables('lbNt1RootIPConfig')]"
+              },
+              "frontendPort": 44380,
+              "idleTimeoutInMinutes": 5,
+              "probe": {
+                "id": "[variables('lbNt1TraefikApiGatewayProbeId')]"
+              },
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "TraefikHttpsInternalGatewayLBRule",
+            "properties": {
+              "backendAddressPool": {
+                "id": "[variables('lbNt1PoolId')]"
+              },
+              "backendPort": 44399,
+              "enableFloatingIP": false,
+              "frontendIPConfiguration": {
+                "id": "[variables('lbNt1RootIPConfig')]"
+              },
+              "frontendPort": 44399,
+              "idleTimeoutInMinutes": 5,
+              "probe": {
+                "id": "[variables('lbNt1TraefikHttpsInternalGatewayProbeId')]"
+              },
+              "protocol": "Tcp"
+            }
+          }
+        ],
+        "probes": [
+          {
+            "name": "FabricGatewayProbe",
+            "properties": {
+              "intervalInSeconds": 5,
+              "numberOfProbes": 2,
+              "port": "[variables('ntfabricTcpGatewayPort')]",
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "FabricHttpGatewayProbe",
+            "properties": {
+              "intervalInSeconds": 5,
+              "numberOfProbes": 2,
+              "port": "[variables('ntfabricHttpGatewayPort')]",
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "ReverseProxyGatewayProbe",
+            "properties": {
+              "intervalInSeconds": 5,
+              "numberOfProbes": 2,
+              "port": "[variables('ntreverseProxyEndpointPort')]",
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "TraefikApiGatewayProbe",
+            "properties": {
+              "intervalInSeconds": 5,
+              "numberOfProbes": 2,
+              "port": 44380,
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "TraefikHttpsInternalGatewayProbe",
+            "properties": {
+              "intervalInSeconds": 5,
+              "numberOfProbes": 2,
+              "port": 44399,
+              "protocol": "Tcp"
+            }
+          }
+        ],
+        "inboundNatPools": [
+          {
+            "name": "LoadBalancerBEAddressNatPool",
+            "properties": {
+              "backendPort": 3389,
+              "frontendIPConfiguration": {
+                "id": "[variables('lbNt1RootIPConfig')]"
+              },
+              "frontendPortRangeEnd": 4500,
+              "frontendPortRangeStart": 3389,
+              "protocol": "Tcp"
+            }
+          }
+        ]
+      },
+      "tags": {
+        "Scope": "EdGraph",
+        "Type": "Service Fabric"
+      }
+    },
+    {
+      "type": "Microsoft.Network/loadBalancers",
+      "apiVersion": "2019-04-01",
+      "name": "[variables('internalNt2LBName')]",
+      "location": "[variables('locationObject').Name]",
+      "dependsOn": [],
+      "properties": {
+        "frontendIPConfigurations": [
+          {
+            "name": "RootIPConfig",
+            "properties": {
+              "subnet": {
+                "id": "[variables('sfNt2SubnetRef')]"
+              },
+              //"privateIPAddress": "[variables('internalLBIpAddress')]",
+              "privateIPAllocationMethod": "Dynamic"
+            }
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "LoadBalancerBEAddressPool",
+            "properties": {}
+          }
+        ],
+        "loadBalancingRules": [
+          {
+            "name": "FabricGatewayLBRule",
+            "properties": {
+              "backendAddressPool": {
+                "id": "[variables('lbNt2PoolId')]"
+              },
+              "backendPort": "[variables('ntfabricTcpGatewayPort')]",
+              "enableFloatingIP": false,
+              "frontendIPConfiguration": {
+                "id": "[variables('lbNt2RootIPConfig')]"
+              },
+              "frontendPort": "[variables('ntfabricTcpGatewayPort')]",
+              "idleTimeoutInMinutes": 5,
+              "probe": {
+                "id": "[variables('lbNt2FabricGatewayProbeId')]"
+              },
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "FabricHttpGatewayLBRule",
+            "properties": {
+              "backendAddressPool": {
+                "id": "[variables('lbNt2PoolId')]"
+              },
+              "backendPort": "[variables('ntfabricHttpGatewayPort')]",
+              "enableFloatingIP": false,
+              "frontendIPConfiguration": {
+                "id": "[variables('lbNt2RootIPConfig')]"
+              },
+              "frontendPort": "[variables('ntfabricHttpGatewayPort')]",
+              "idleTimeoutInMinutes": 5,
+              "probe": {
+                "id": "[variables('lbNt2FabricHttpGatewayProbeId')]"
+              },
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "FabricReverseProxyGatewayLBRule",
+            "properties": {
+              "backendAddressPool": {
+                "id": "[variables('lbNt2PoolId')]"
+              },
+              "backendPort": "[variables('ntreverseProxyEndpointPort')]",
+              "enableFloatingIP": false,
+              "frontendIPConfiguration": {
+                "id": "[variables('lbNt2RootIPConfig')]"
+              },
+              "frontendPort": "[variables('ntreverseProxyEndpointPort')]",
+              "idleTimeoutInMinutes": 5,
+              "probe": {
+                "id": "[variables('lbNt2FabricReverseProxyProbeId')]"
+              },
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "TraefikApiGatewayLBRule",
+            "properties": {
+              "backendAddressPool": {
+                "id": "[variables('lbNt2PoolId')]"
+              },
+              "backendPort": 44380,
+              "enableFloatingIP": false,
+              "frontendIPConfiguration": {
+                "id": "[variables('lbNt2RootIPConfig')]"
+              },
+              "frontendPort": 44380,
+              "idleTimeoutInMinutes": 5,
+              "probe": {
+                "id": "[variables('lbNt2TraefikApiGatewayProbeId')]"
+              },
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "TraefikHttpsInternalGatewayLBRule",
+            "properties": {
+              "backendAddressPool": {
+                "id": "[variables('lbNt2PoolId')]"
+              },
+              "backendPort": 44399,
+              "enableFloatingIP": false,
+              "frontendIPConfiguration": {
+                "id": "[variables('lbNt2RootIPConfig')]"
+              },
+              "frontendPort": 44399,
+              "idleTimeoutInMinutes": 5,
+              "probe": {
+                "id": "[variables('lbNt2TraefikHttpsInternalGatewayProbeId')]"
+              },
+              "protocol": "Tcp"
+            }
+          }
+        ],
+        "probes": [
+          {
+            "name": "FabricGatewayProbe",
+            "properties": {
+              "intervalInSeconds": 5,
+              "numberOfProbes": 2,
+              "port": "[variables('ntfabricTcpGatewayPort')]",
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "FabricHttpGatewayProbe",
+            "properties": {
+              "intervalInSeconds": 5,
+              "numberOfProbes": 2,
+              "port": "[variables('ntfabricHttpGatewayPort')]",
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "ReverseProxyGatewayProbe",
+            "properties": {
+              "intervalInSeconds": 5,
+              "numberOfProbes": 2,
+              "port": "[variables('ntreverseProxyEndpointPort')]",
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "TraefikApiGatewayProbe",
+            "properties": {
+              "intervalInSeconds": 5,
+              "numberOfProbes": 2,
+              "port": 44380,
+              "protocol": "Tcp"
+            }
+          },
+          {
+            "name": "TraefikHttpsInternalGatewayProbe",
+            "properties": {
+              "intervalInSeconds": 5,
+              "numberOfProbes": 2,
+              "port": 44399,
+              "protocol": "Tcp"
+            }
+          }
+        ],
+        "inboundNatPools": [
+          {
+            "name": "LoadBalancerBEAddressNatPool",
+            "properties": {
+              "backendPort": 3389,
+              "frontendIPConfiguration": {
+                "id": "[variables('lbNt2RootIPConfig')]"
+              },
+              "frontendPortRangeEnd": 4500,
+              "frontendPortRangeStart": 3389,
+              "protocol": "Tcp"
+            }
+          }
+        ]
+      },
+      "tags": {
+        "Scope": "EdGraph",
+        "Type": "Service Fabric"
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2015-11-01-preview",
+      "name": "[variables('omsWorkspacename')]",
+      "location": "[variables('locationObject').Name]",
+      "dependsOn": [],
+      "properties": {
+        "sku": {
+          "name": "pergb2018"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachineScaleSets",
+      "apiVersion": "2019-03-01",
+      "name": "[variables('nt0VmName')]",
+      "location": "[variables('locationObject').Name]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/loadBalancers/', variables('internalNt0LBName'))]",
+        "[concat('Microsoft.Storage/storageAccounts/', variables('supportLogStorageAccountName'))]",
+        "[concat('Microsoft.Storage/storageAccounts/', variables('applicationDiagnosticsStorageAccountName'))]",
+        "[concat('Microsoft.OperationalInsights/workspaces/', variables('omsWorkspacename'))]"
+      ],
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "overprovision": false,
+        "upgradePolicy": {
+          "mode": "Automatic"
+        },
+        "virtualMachineProfile": {
+          "extensionProfile": {
+            "extensions": [
+              {
+                "name": "[concat('ServiceFabricNodeVmExt_', variables('nt0VmName'))]",
+                "properties": {
+                  "type": "ServiceFabricNode",
+                  "autoUpgradeMinorVersion": true,
+                  "protectedSettings": {
+                    "StorageAccountKey1": "[listKeys(resourceId( 'Microsoft.Storage/storageAccounts', variables('supportLogStorageAccountName')),'2015-05-01-preview').key1]",
+                    "StorageAccountKey2": "[listKeys(resourceId( 'Microsoft.Storage/storageAccounts', variables('supportLogStorageAccountName')),'2015-05-01-preview').key2]"
+                  },
+                  "publisher": "Microsoft.Azure.ServiceFabric",
+                  "settings": {
+                    "clusterEndpoint": "[reference(concat('Microsoft.ServiceFabric/clusters/', variables('sfClusterName')), '2019-03-01').clusterEndpoint]",
+                    "nodeTypeRef": "[variables('nt0VmName')]",
+                    "dataPath": "D:\\\\SvcFab",
+                    "durabilityLevel": "Bronze",
+                    "enableParallelJobs": true,
+                    "NicPrefixOverride": "[variables('sfNt0SubnetPrefix')]",
+                    "certificate": {
+                      "commonNames": [
+                        "[parameters('certificates').sslCertificate.commonName]"
+                      ],
+                      "x509StoreName": "My"
+                    }
+                  },
+                  "typeHandlerVersion": "1.0"
+                }
+              },
+              {
+                "name": "[concat('VMDiagnosticsVmExt_', variables('nt0VmName'))]",
+                "properties": {
+                  "type": "IaaSDiagnostics",
+                  "autoUpgradeMinorVersion": true,
+                  "protectedSettings": {
+                    "storageAccountName": "[variables('applicationDiagnosticsStorageAccountName')]",
+                    "storageAccountKey": "[listKeys(resourceId( 'Microsoft.Storage/storageAccounts', variables('applicationDiagnosticsStorageAccountName')),'2015-05-01-preview').key1]",
+                    "storageAccountEndPoint": "https://core.windows.net/"
+                  },
+                  "publisher": "Microsoft.Azure.Diagnostics",
+                  "settings": {
+                    "WadCfg": {
+                      "DiagnosticMonitorConfiguration": {
+                        "overallQuotaInMB": "50000",
+                        "EtwProviders": {
+                          "EtwEventSourceProviderConfiguration": [
+                            {
+                              "provider": "Microsoft-ServiceFabric-Actors",
+                              "scheduledTransferKeywordFilter": "1",
+                              "scheduledTransferPeriod": "PT5M",
+                              "DefaultEvents": {
+                                "eventDestination": "ServiceFabricReliableActorEventTable"
+                              }
+                            },
+                            {
+                              "provider": "Microsoft-ServiceFabric-Services",
+                              "scheduledTransferPeriod": "PT5M",
+                              "DefaultEvents": {
+                                "eventDestination": "ServiceFabricReliableServiceEventTable"
+                              }
+                            }
+                          ],
+                          "EtwManifestProviderConfiguration": [
+                            {
+                              "provider": "cbd93bc2-71e5-4566-b3a7-595d8eeca6e8",
+                              "scheduledTransferLogLevelFilter": "Information",
+                              "scheduledTransferKeywordFilter": "4611686018427387904",
+                              "scheduledTransferPeriod": "PT5M",
+                              "DefaultEvents": {
+                                "eventDestination": "ServiceFabricSystemEventTable"
+                              }
+                            }
+                          ]
+                        },
+                        "PerformanceCounters": {
+                          "scheduledTransferPeriod": "PT1M",
+                          "PerformanceCounterConfiguration": [
+                            {
+                              "counterSpecifier": "\\Logical Disk\\Logical Disk Free Space",
+                              "sampleRate": "PT1M",
+                              "unit": "Percent",
+                              "annotation": [
+                                {
+                                  "displayName": "Logical Disk Free Space",
+                                  "locale": "en-us"
+                                }
+                              ]
+                            },
+                            {
+                              "counterSpecifier": "\\Processor(_Total)\\% Processor Time",
+                              "sampleRate": "PT1M",
+                              "unit": "Percent",
+                              "annotation": [
+                                {
+                                  "displayName": "% Processor Time (Total)",
+                                  "locale": "en-us"
+                                }
+                              ]
+                            },
+                            {
+                              "counterSpecifier": "\\Memory\\Available Bytes",
+                              "sampleRate": "PT1M",
+                              "unit": "KB",
+                              "sinks": "applicationInsights",
+                              "annotation": [
+                                {
+                                  "displayName": "Memory Available Kb",
+                                  "locale": "en-us"
+                                }
+                              ]
+                            },
+                            {
+                              "counterSpecifier": "\\Memory\\% Committed Bytes In Use",
+                              "sampleRate": "PT15S",
+                              "unit": "percent",
+                              "annotation": [
+                                {
+                                  "displayName": "Memory usage",
+                                  "locale": "en-us"
+                                }
+                              ]
+                            },
+                            {
+                              "counterSpecifier": "\\Service Fabric Service Method(*)\\Average milliseconds per invocation",
+                              "sampleRate": "PT1M"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "StorageAccount": "[variables('applicationDiagnosticsStorageAccountName')]"
+                  },
+                  "typeHandlerVersion": "1.5"
+                }
+              },
+              {
+                "name": "[concat('OMSVmExt_', variables('nt0VmName'))]",
+                "properties": {
+                  "publisher": "Microsoft.EnterpriseCloud.Monitoring",
+                  "type": "MicrosoftMonitoringAgent",
+                  "typeHandlerVersion": "1.0",
+                  "autoUpgradeMinorVersion": true,
+                  "settings": {
+                    "workspaceId": "[reference(concat('Microsoft.OperationalInsights/workspaces/', variables('omsWorkspacename')), '2015-11-01-preview').customerId]"
+                  },
+                  "protectedSettings": {
+                    "workspaceKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces/', variables('omsWorkspacename')),'2015-11-01-preview').primarySharedKey]"
+                  }
+                }
+              },
+              {
+                "name": "customScript",
+                "properties": {
+                  "publisher": "Microsoft.Compute",
+                  "settings": {
+                    "fileUris": [
+                      "https://raw.githubusercontent.com/EdWire/Infrastructure/master/Scripts/sf-vmscaleset.ps1"
+                    ]
+                  },
+                  "typeHandlerVersion": "1.8",
+                  "autoUpgradeMinorVersion": true,
+                  "protectedSettings": {
+                    "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File sf-vmscaleset.ps1 -SetPermissionToCertificate -CertThumbprint \"', parameters('certificates').dataEnciphermentCertificate.certificateThumbprint, '\" > sf-vmscaleset-extension-log.txt')]"
+                  },
+                  "type": "CustomScriptExtension"
+                }
+              }
+            ]
+          },
+          "networkProfile": {
+            "networkInterfaceConfigurations": [
+              {
+                "name": "[variables('nt0VmNicName')]",
+                "properties": {
+                  "ipConfigurations": [
+                    {
+                      "name": "[variables('nt0VmNicName')]",
+                      "properties": {
+                        "loadBalancerBackendAddressPools": [
+                          {
+                            "id": "[variables('lbNt0PoolId')]"
+                          }
+                        ],
+                        "loadBalancerInboundNatPools": [
+                          {
+                            "id": "[variables('lbNt0NatPoolId')]"
+                          }
+                        ],
+                        "subnet": {
+                          "id": "[variables('sfNt0SubnetRef')]"
+                        }
+                      }
+                    }
+                  ],
+                  "primary": true
+                }
+              }
+            ]
+          },
+          "osProfile": {
+            "adminUsername": "[variables('vmssAdminUserName')]",
+            "adminPassword": "[variables('vmssAdminPassword')]",
+            "computernamePrefix": "[variables('nt0VmName')]",
+            "secrets": [
+              {
+                "sourceVault": {
+                  "id": "[resourceId('Microsoft.KeyVault/vaults', parameters('certificates').keyVaultName)]"
+                },
+                "vaultCertificates": [
+                  {
+                    "certificateStore": "My",
+                    "certificateUrl": "[parameters('certificates').sslCertificate.certificateSecretKeyVaultUrl]"
+                  },
+                  {
+                    "certificateStore": "My",
+                    "certificateUrl": "[parameters('certificates').dataEnciphermentCertificate.certificateSecretKeyVaultUrl]"
+                  }
+                ]
+              }
+            ]
+          },
+          "storageProfile": {
+            "imageReference": {
+              "publisher": "[parameters('sfNodeTypes').frontendNodeType.imagePublisher]",
+              "offer": "[parameters('sfNodeTypes').frontendNodeType.imageOffer]",
+              "sku": "[parameters('sfNodeTypes').frontendNodeType.imageSku]",
+              "version": "[parameters('sfNodeTypes').frontendNodeType.imageVersion]"
+            },
+            "osDisk": {
+              "caching": "ReadOnly",
+              "createOption": "FromImage",
+              "managedDisk": {
+                "storageAccountType": "Standard_LRS"
+              }
+            }
+          }
+        }
+      },
+      "sku": {
+        "name": "[parameters('sfNodeTypes').frontendNodeType.sku]",
+        "capacity": "[parameters('sfNodeTypes').frontendNodeType.instanceCount]",
+        "tier": "Standard"
+      },
+      "tags": {
+        "Scope": "EdGraph",
+        "Type": "Service Fabric"
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachineScaleSets",
+      "apiVersion": "2019-03-01",
+      "name": "[variables('nt1VmName')]",
+      "location": "[variables('locationObject').Name]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/loadBalancers/', variables('internalNt1LBName'))]",
+        "[concat('Microsoft.Storage/storageAccounts/', variables('supportLogStorageAccountName'))]",
+        "[concat('Microsoft.Storage/storageAccounts/', variables('applicationDiagnosticsStorageAccountName'))]",
+        "[concat('Microsoft.OperationalInsights/workspaces/', variables('omsWorkspacename'))]"
+      ],
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "overprovision": false,
+        "upgradePolicy": {
+          "mode": "Automatic"
+        },
+        "virtualMachineProfile": {
+          "extensionProfile": {
+            "extensions": [
+              {
+                "name": "[concat('ServiceFabricNodeVmExt_', variables('nt1VmName'))]",
+                "properties": {
+                  "type": "ServiceFabricNode",
+                  "autoUpgradeMinorVersion": true,
+                  "protectedSettings": {
+                    "StorageAccountKey1": "[listKeys(resourceId( 'Microsoft.Storage/storageAccounts', variables('supportLogStorageAccountName')),'2015-05-01-preview').key1]",
+                    "StorageAccountKey2": "[listKeys(resourceId( 'Microsoft.Storage/storageAccounts', variables('supportLogStorageAccountName')),'2015-05-01-preview').key2]"
+                  },
+                  "publisher": "Microsoft.Azure.ServiceFabric",
+                  "settings": {
+                    "clusterEndpoint": "[reference(concat('Microsoft.ServiceFabric/clusters/', variables('sfClusterName')), '2019-03-01').clusterEndpoint]",
+                    "nodeTypeRef": "[variables('nt1VmName')]",
+                    "dataPath": "D:\\\\SvcFab",
+                    "durabilityLevel": "Bronze",
+                    "enableParallelJobs": true,
+                    "NicPrefixOverride": "[variables('sfNt1SubnetPrefix')]",
+                    "certificate": {
+                      "commonNames": [
+                        "[parameters('certificates').sslCertificate.commonName]"
+                      ],
+                      "x509StoreName": "My"
+                    }
+                  },
+                  "typeHandlerVersion": "1.0"
+                }
+              },
+              {
+                "name": "[concat('VMDiagnosticsVmExt_', variables('nt1VmName'))]",
+                "properties": {
+                  "type": "IaaSDiagnostics",
+                  "autoUpgradeMinorVersion": true,
+                  "protectedSettings": {
+                    "storageAccountName": "[variables('applicationDiagnosticsStorageAccountName')]",
+                    "storageAccountKey": "[listKeys(resourceId( 'Microsoft.Storage/storageAccounts', variables('applicationDiagnosticsStorageAccountName')),'2015-05-01-preview').key1]",
+                    "storageAccountEndPoint": "https://core.windows.net/"
+                  },
+                  "publisher": "Microsoft.Azure.Diagnostics",
+                  "settings": {
+                    "WadCfg": {
+                      "DiagnosticMonitorConfiguration": {
+                        "overallQuotaInMB": "50000",
+                        "EtwProviders": {
+                          "EtwEventSourceProviderConfiguration": [
+                            {
+                              "provider": "Microsoft-ServiceFabric-Actors",
+                              "scheduledTransferKeywordFilter": "1",
+                              "scheduledTransferPeriod": "PT5M",
+                              "DefaultEvents": {
+                                "eventDestination": "ServiceFabricReliableActorEventTable"
+                              }
+                            },
+                            {
+                              "provider": "Microsoft-ServiceFabric-Services",
+                              "scheduledTransferPeriod": "PT5M",
+                              "DefaultEvents": {
+                                "eventDestination": "ServiceFabricReliableServiceEventTable"
+                              }
+                            }
+                          ],
+                          "EtwManifestProviderConfiguration": [
+                            {
+                              "provider": "cbd93bc2-71e5-4566-b3a7-595d8eeca6e8",
+                              "scheduledTransferLogLevelFilter": "Information",
+                              "scheduledTransferKeywordFilter": "4611686018427387904",
+                              "scheduledTransferPeriod": "PT5M",
+                              "DefaultEvents": {
+                                "eventDestination": "ServiceFabricSystemEventTable"
+                              }
+                            }
+                          ]
+                        },
+                        "PerformanceCounters": {
+                          "scheduledTransferPeriod": "PT1M",
+                          "PerformanceCounterConfiguration": [
+                            {
+                              "counterSpecifier": "\\Logical Disk\\Logical Disk Free Space",
+                              "sampleRate": "PT1M",
+                              "unit": "Percent",
+                              "annotation": [
+                                {
+                                  "displayName": "Logical Disk Free Space",
+                                  "locale": "en-us"
+                                }
+                              ]
+                            },
+                            {
+                              "counterSpecifier": "\\Processor(_Total)\\% Processor Time",
+                              "sampleRate": "PT1M",
+                              "unit": "Percent",
+                              "annotation": [
+                                {
+                                  "displayName": "% Processor Time (Total)",
+                                  "locale": "en-us"
+                                }
+                              ]
+                            },
+                            {
+                              "counterSpecifier": "\\Memory\\Available Bytes",
+                              "sampleRate": "PT1M",
+                              "unit": "KB",
+                              "sinks": "applicationInsights",
+                              "annotation": [
+                                {
+                                  "displayName": "Memory Available Kb",
+                                  "locale": "en-us"
+                                }
+                              ]
+                            },
+                            {
+                              "counterSpecifier": "\\Memory\\% Committed Bytes In Use",
+                              "sampleRate": "PT15S",
+                              "unit": "percent",
+                              "annotation": [
+                                {
+                                  "displayName": "Memory usage",
+                                  "locale": "en-us"
+                                }
+                              ]
+                            },
+                            {
+                              "counterSpecifier": "\\Service Fabric Service Method(*)\\Average milliseconds per invocation",
+                              "sampleRate": "PT1M"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "StorageAccount": "[variables('applicationDiagnosticsStorageAccountName')]"
+                  },
+                  "typeHandlerVersion": "1.5"
+                }
+              },
+              {
+                "name": "[concat('OMSVmExt_', variables('nt1VmName'))]",
+                "properties": {
+                  "publisher": "Microsoft.EnterpriseCloud.Monitoring",
+                  "type": "MicrosoftMonitoringAgent",
+                  "typeHandlerVersion": "1.0",
+                  "autoUpgradeMinorVersion": true,
+                  "settings": {
+                    "workspaceId": "[reference(concat('Microsoft.OperationalInsights/workspaces/', variables('omsWorkspacename')), '2015-11-01-preview').customerId]"
+                  },
+                  "protectedSettings": {
+                    "workspaceKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces/', variables('omsWorkspacename')),'2015-11-01-preview').primarySharedKey]"
+                  }
+                }
+              },
+              {
+                "name": "customScript",
+                "properties": {
+                  "publisher": "Microsoft.Compute",
+                  "settings": {
+                    "fileUris": [
+                      "https://raw.githubusercontent.com/EdWire/Infrastructure/master/Scripts/sf-vmscaleset.ps1"
+                    ]
+                  },
+                  "typeHandlerVersion": "1.8",
+                  "autoUpgradeMinorVersion": true,
+                  "protectedSettings": {
+                    "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File sf-vmscaleset.ps1 -SetPermissionToCertificate -CertThumbprint \"', parameters('certificates').dataEnciphermentCertificate.certificateThumbprint, '\" > sf-vmscaleset-extension-log.txt')]"
+                  },
+                  "type": "CustomScriptExtension"
+                }
+              }
+
+            ]
+          },
+          "networkProfile": {
+            "networkInterfaceConfigurations": [
+              {
+                "name": "[variables('nt1VmNicName')]",
+                "properties": {
+                  "ipConfigurations": [
+                    {
+                      "name": "[variables('nt1VmNicName')]",
+                      "properties": {
+                        "loadBalancerBackendAddressPools": [
+                          {
+                            "id": "[variables('lbNt1PoolId')]"
+                          }
+                        ],
+                        "loadBalancerInboundNatPools": [
+                          {
+                            "id": "[variables('lbNt1NatPoolId')]"
+                          }
+                        ],
+                        "subnet": {
+                          "id": "[variables('sfNt1SubnetRef')]"
+                        }
+                      }
+                    }
+                  ],
+                  "primary": true
+                }
+              }
+            ]
+          },
+          "osProfile": {
+            "adminUsername": "[variables('vmssAdminUserName')]",
+            "adminPassword": "[variables('vmssAdminPassword')]",
+            "computernamePrefix": "[variables('nt1VmName')]",
+            "secrets": [
+              {
+                "sourceVault": {
+                  "id": "[resourceId('Microsoft.KeyVault/vaults', parameters('certificates').keyVaultName)]"
+                },
+                "vaultCertificates": [
+                  {
+                    "certificateStore": "My",
+                    "certificateUrl": "[parameters('certificates').sslCertificate.certificateSecretKeyVaultUrl]"
+                  },
+                  {
+                    "certificateStore": "My",
+                    "certificateUrl": "[parameters('certificates').dataEnciphermentCertificate.certificateSecretKeyVaultUrl]"
+                  }
+                ]
+              }
+            ]
+          },
+          "storageProfile": {
+            "imageReference": {
+              "publisher": "[parameters('sfNodeTypes').backendNodeType.imagePublisher]",
+              "offer": "[parameters('sfNodeTypes').backendNodeType.imageOffer]",
+              "sku": "[parameters('sfNodeTypes').backendNodeType.imageSku]",
+              "version": "[parameters('sfNodeTypes').backendNodeType.imageVersion]"
+            },
+            "osDisk": {
+              "caching": "ReadOnly",
+              "createOption": "FromImage",
+              "managedDisk": {
+                "storageAccountType": "Standard_LRS"
+              }
+            }
+          }
+        }
+      },
+      "sku": {
+        "name": "[parameters('sfNodeTypes').backendNodeType.sku]",
+        "capacity": "[parameters('sfNodeTypes').backendNodeType.instanceCount]",
+        "tier": "Standard"
+      },
+      "tags": {
+        "Scope": "EdGraph",
+        "Type": "Service Fabric"
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachineScaleSets",
+      "apiVersion": "2019-03-01",
+      "name": "[variables('nt2VmName')]",
+      "location": "[variables('locationObject').Name]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/loadBalancers/', variables('internalNt2LBName'))]",
+        "[concat('Microsoft.Storage/storageAccounts/', variables('supportLogStorageAccountName'))]",
+        "[concat('Microsoft.Storage/storageAccounts/', variables('applicationDiagnosticsStorageAccountName'))]",
+        "[concat('Microsoft.OperationalInsights/workspaces/', variables('omsWorkspacename'))]"
+      ],
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "overprovision": false,
+        "upgradePolicy": {
+          "mode": "Automatic"
+        },
+        "virtualMachineProfile": {
+          "extensionProfile": {
+            "extensions": [
+              {
+                "name": "[concat('ServiceFabricNodeVmExt_', variables('nt2VmName'))]",
+                "properties": {
+                  "type": "ServiceFabricNode",
+                  "autoUpgradeMinorVersion": true,
+                  "protectedSettings": {
+                    "StorageAccountKey1": "[listKeys(resourceId( 'Microsoft.Storage/storageAccounts', variables('supportLogStorageAccountName')),'2015-05-01-preview').key1]",
+                    "StorageAccountKey2": "[listKeys(resourceId( 'Microsoft.Storage/storageAccounts', variables('supportLogStorageAccountName')),'2015-05-01-preview').key2]"
+                  },
+                  "publisher": "Microsoft.Azure.ServiceFabric",
+                  "settings": {
+                    "clusterEndpoint": "[reference(concat('Microsoft.ServiceFabric/clusters/', variables('sfClusterName')), '2019-03-01').clusterEndpoint]",
+                    "nodeTypeRef": "[variables('nt2VmName')]",
+                    "dataPath": "D:\\\\SvcFab",
+                    "durabilityLevel": "Bronze",
+                    "enableParallelJobs": true,
+                    "NicPrefixOverride": "[variables('sfNt2SubnetPrefix')]",
+                    "certificate": {
+                      "commonNames": [
+                        "[parameters('certificates').sslCertificate.commonName]"
+                      ],
+                      "x509StoreName": "My"
+                    }
+                  },
+                  "typeHandlerVersion": "1.0"
+                }
+              },
+              {
+                "name": "[concat('VMDiagnosticsVmExt_', variables('nt2VmName'))]",
+                "properties": {
+                  "type": "IaaSDiagnostics",
+                  "autoUpgradeMinorVersion": true,
+                  "protectedSettings": {
+                    "storageAccountName": "[variables('applicationDiagnosticsStorageAccountName')]",
+                    "storageAccountKey": "[listKeys(resourceId( 'Microsoft.Storage/storageAccounts', variables('applicationDiagnosticsStorageAccountName')),'2015-05-01-preview').key1]",
+                    "storageAccountEndPoint": "https://core.windows.net/"
+                  },
+                  "publisher": "Microsoft.Azure.Diagnostics",
+                  "settings": {
+                    "WadCfg": {
+                      "DiagnosticMonitorConfiguration": {
+                        "overallQuotaInMB": "50000",
+                        "EtwProviders": {
+                          "EtwEventSourceProviderConfiguration": [
+                            {
+                              "provider": "Microsoft-ServiceFabric-Actors",
+                              "scheduledTransferKeywordFilter": "1",
+                              "scheduledTransferPeriod": "PT5M",
+                              "DefaultEvents": {
+                                "eventDestination": "ServiceFabricReliableActorEventTable"
+                              }
+                            },
+                            {
+                              "provider": "Microsoft-ServiceFabric-Services",
+                              "scheduledTransferPeriod": "PT5M",
+                              "DefaultEvents": {
+                                "eventDestination": "ServiceFabricReliableServiceEventTable"
+                              }
+                            }
+                          ],
+                          "EtwManifestProviderConfiguration": [
+                            {
+                              "provider": "cbd93bc2-71e5-4566-b3a7-595d8eeca6e8",
+                              "scheduledTransferLogLevelFilter": "Information",
+                              "scheduledTransferKeywordFilter": "4611686018427387904",
+                              "scheduledTransferPeriod": "PT5M",
+                              "DefaultEvents": {
+                                "eventDestination": "ServiceFabricSystemEventTable"
+                              }
+                            }
+                          ]
+                        },
+                        "PerformanceCounters": {
+                          "scheduledTransferPeriod": "PT1M",
+                          "PerformanceCounterConfiguration": [
+                            {
+                              "counterSpecifier": "\\Logical Disk\\Logical Disk Free Space",
+                              "sampleRate": "PT1M",
+                              "unit": "Percent",
+                              "annotation": [
+                                {
+                                  "displayName": "Logical Disk Free Space",
+                                  "locale": "en-us"
+                                }
+                              ]
+                            },
+                            {
+                              "counterSpecifier": "\\Processor(_Total)\\% Processor Time",
+                              "sampleRate": "PT1M",
+                              "unit": "Percent",
+                              "annotation": [
+                                {
+                                  "displayName": "% Processor Time (Total)",
+                                  "locale": "en-us"
+                                }
+                              ]
+                            },
+                            {
+                              "counterSpecifier": "\\Memory\\Available Bytes",
+                              "sampleRate": "PT1M",
+                              "unit": "KB",
+                              "sinks": "applicationInsights",
+                              "annotation": [
+                                {
+                                  "displayName": "Memory Available Kb",
+                                  "locale": "en-us"
+                                }
+                              ]
+                            },
+                            {
+                              "counterSpecifier": "\\Memory\\% Committed Bytes In Use",
+                              "sampleRate": "PT15S",
+                              "unit": "percent",
+                              "annotation": [
+                                {
+                                  "displayName": "Memory usage",
+                                  "locale": "en-us"
+                                }
+                              ]
+                            },
+                            {
+                              "counterSpecifier": "\\Service Fabric Service Method(*)\\Average milliseconds per invocation",
+                              "sampleRate": "PT1M"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "StorageAccount": "[variables('applicationDiagnosticsStorageAccountName')]"
+                  },
+                  "typeHandlerVersion": "1.5"
+                }
+              },
+              {
+                "name": "[concat('OMSVmExt_', variables('nt2VmName'))]",
+                "properties": {
+                  "publisher": "Microsoft.EnterpriseCloud.Monitoring",
+                  "type": "MicrosoftMonitoringAgent",
+                  "typeHandlerVersion": "1.0",
+                  "autoUpgradeMinorVersion": true,
+                  "settings": {
+                    "workspaceId": "[reference(concat('Microsoft.OperationalInsights/workspaces/', variables('omsWorkspacename')), '2015-11-01-preview').customerId]"
+                  },
+                  "protectedSettings": {
+                    "workspaceKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces/', variables('omsWorkspacename')),'2015-11-01-preview').primarySharedKey]"
+                  }
+                }
+              },
+              {
+                "name": "customScript",
+                "properties": {
+                  "publisher": "Microsoft.Compute",
+                  "settings": {
+                    "fileUris": [
+                      "https://raw.githubusercontent.com/EdWire/Infrastructure/master/Scripts/sf-vmscaleset.ps1"
+                    ]
+                  },
+                  "typeHandlerVersion": "1.8",
+                  "autoUpgradeMinorVersion": true,
+                  "protectedSettings": {
+                    "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File sf-vmscaleset.ps1 -PrepElasticSearch -SetPermissionToCertificate -CertThumbprint \"', parameters('certificates').dataEnciphermentCertificate.certificateThumbprint, '\" > sf-vmscaleset-extension-log.txt')]"
+                  },
+                  "type": "CustomScriptExtension"
+                }
+              }
+            ]
+          },
+          "networkProfile": {
+            "networkInterfaceConfigurations": [
+              {
+                "name": "[variables('nt2VmNicName')]",
+                "properties": {
+                  "ipConfigurations": [
+                    {
+                      "name": "[variables('nt2VmNicName')]",
+                      "properties": {
+                        "loadBalancerBackendAddressPools": [
+                          {
+                            "id": "[variables('lbNt2PoolId')]"
+                          }
+                        ],
+                        "loadBalancerInboundNatPools": [
+                          {
+                            "id": "[variables('lbNt2NatPoolId')]"
+                          }
+                        ],
+                        "subnet": {
+                          "id": "[variables('sfNt2SubnetRef')]"
+                        }
+                      }
+                    }
+                  ],
+                  "primary": true
+                }
+              }
+            ]
+          },
+          "osProfile": {
+            "adminUsername": "[variables('vmssAdminUserName')]",
+            "adminPassword": "[variables('vmssAdminPassword')]",
+            "computernamePrefix": "[variables('nt2VmName')]",
+            "secrets": [
+              {
+                "sourceVault": {
+                  "id": "[resourceId('Microsoft.KeyVault/vaults', parameters('certificates').keyVaultName)]"
+                },
+                "vaultCertificates": [
+                  {
+                    "certificateStore": "My",
+                    "certificateUrl": "[parameters('certificates').sslCertificate.certificateSecretKeyVaultUrl]"
+                  },
+                  {
+                    "certificateStore": "My",
+                    "certificateUrl": "[parameters('certificates').dataEnciphermentCertificate.certificateSecretKeyVaultUrl]"
+                  }
+                ]
+              }
+            ]
+          },
+          "storageProfile": {
+            "imageReference": {
+              "publisher": "[parameters('sfNodeTypes').elasticNodeType.imagePublisher]",
+              "offer": "[parameters('sfNodeTypes').elasticNodeType.imageOffer]",
+              "sku": "[parameters('sfNodeTypes').elasticNodeType.imageSku]",
+              "version": "[parameters('sfNodeTypes').elasticNodeType.imageVersion]"
+            },
+            "osDisk": {
+              "caching": "ReadOnly",
+              "createOption": "FromImage",
+              "managedDisk": {
+                "storageAccountType": "Standard_LRS"
+              }
+            },
+            "dataDisks": [
+              {
+                "lun": 0,
+                "createOption": "Empty",
+                "diskSizeGB": 50
+              }
+            ]
+          }
+        }
+      },
+      "sku": {
+        "name": "[parameters('sfNodeTypes').elasticNodeType.sku]",
+        "capacity": "[parameters('sfNodeTypes').elasticNodeType.instanceCount]",
+        "tier": "Standard"
+      },
+      "tags": {
+        "Scope": "EdGraph",
+        "Type": "Service Fabric"
+      }
+    },
+    {
+      "type": "Microsoft.ServiceFabric/clusters",
+      "apiVersion": "2019-03-01",
+      "name": "[variables('sfClusterName')]",
+      "location": "[variables('locationObject').Name]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/loadBalancers/', variables('internalNt0LBName'))]",
+        "[concat('Microsoft.Storage/storageAccounts/', variables('supportLogStorageAccountName'))]"
+      ],
+      "properties": {
+        "addonFeatures": [
+          "DnsService",
+          "RepairManager"
+        ],
+        "certificateCommonNames": {
+          "commonNames": [
+            {
+              "certificateCommonName": "[parameters('certificates').sslCertificate.commonName]",
+              "certificateIssuerThumbprint": ""
+            }
+          ],
+          "x509StoreName": "My"
+        },
+        "azureActiveDirectory": {
+          "tenantId": "[parameters('aadApplication').aadTenantId]",
+          "clusterApplication": "[parameters('aadApplication').aadSfClusterExplorerApplicationId]",
+          "clientApplication": "[parameters('aadApplication').aadSfClusterClientApplicationId]"
+        },
+        "clientCertificateCommonNames": [],
+        "clientCertificateThumbprints": [],
+        "clusterState": "Default",
+        "diagnosticsStorageAccountConfig": {
+          "blobEndpoint": "[reference(concat('Microsoft.Storage/storageAccounts/', variables('supportLogStorageAccountName')), '2019-04-01').primaryEndpoints.blob]",
+          "protectedAccountKeyName": "StorageAccountKey1",
+          "queueEndpoint": "[reference(concat('Microsoft.Storage/storageAccounts/', variables('supportLogStorageAccountName')), '2019-04-01').primaryEndpoints.queue]",
+          "storageAccountName": "[variables('supportLogStorageAccountName')]",
+          "tableEndpoint": "[reference(concat('Microsoft.Storage/storageAccounts/', variables('supportLogStorageAccountName')), '2019-04-01').primaryEndpoints.table]"
+        },
+        "fabricSettings": [
+          {
+            "name": "Security",
+            "parameters": [
+              {
+                "name": "ClusterProtectionLevel",
+                "value": "EncryptAndSign"
+              }
+            ]
+          },
+          {
+            "name": "ApplicationGateway/Http",
+            "parameters": [
+              {
+                "name": "SecureOnlyMode",
+                "value": false
+              },
+              {
+                "name": "ApplicationCertificateValidationPolicy",
+                "value": "None"
+              }
+            ]
+          },
+          {
+            "name": "Hosting",
+            "parameters": [
+              {
+                "name": "ContainerImageDownloadTimeout",
+                "value": "5400" // 90 minutes
+              }
+            ]
+          }
+        ],
+        "managementEndpoint": "[concat('https://', reference(concat('Microsoft.Network/loadBalancers/', variables('internalNt0LBName')), '2015-05-01-preview').frontEndIPConfigurations[0].properties.privateIPAddress, ':', variables('ntfabricHttpGatewayPort'))]",
+        "nodeTypes": [
+          {
+            "name": "[variables('nt0VmName')]",
+            "applicationPorts": {
+              "endPort": "[variables('ntapplicationEndPort')]",
+              "startPort": "[variables('ntapplicationStartPort')]"
+            },
+            "clientConnectionEndpointPort": "[variables('ntfabricTcpGatewayPort')]",
+            "durabilityLevel": "Bronze",
+            "ephemeralPorts": {
+              "endPort": "[variables('ntephemeralEndPort')]",
+              "startPort": "[variables('ntephemeralStartPort')]"
+            },
+            "httpGatewayEndpointPort": "[variables('ntfabricHttpGatewayPort')]",
+            "isPrimary": true,
+            "reverseProxyEndpointPort": "[variables('ntreverseProxyEndpointPort')]",
+            "vmInstanceCount": "[parameters('sfNodeTypes').frontendNodeType.instanceCount]",
+            "placementProperties": {
+              "type": "frontend"
+            },
+            "capacities": {
+              "vCpu": "1",
+              "ram": "3",
+              "dataDisks": "4",
+              "tempStorage": "50"
+            }
+          },
+          {
+            "name": "[variables('nt1VmName')]",
+            "applicationPorts": {
+              "endPort": "[variables('ntapplicationEndPort')]",
+              "startPort": "[variables('ntapplicationStartPort')]"
+            },
+            "clientConnectionEndpointPort": "[variables('ntfabricTcpGatewayPort')]",
+            "durabilityLevel": "Bronze",
+            "ephemeralPorts": {
+              "endPort": "[variables('ntephemeralEndPort')]",
+              "startPort": "[variables('ntephemeralStartPort')]"
+            },
+            "httpGatewayEndpointPort": "[variables('ntfabricHttpGatewayPort')]",
+            "isPrimary": false,
+            "reverseProxyEndpointPort": "[variables('ntreverseProxyEndpointPort')]",
+            "vmInstanceCount": "[parameters('sfNodeTypes').backendNodeType.instanceCount]",
+            "placementProperties": {
+              "type": "backend"
+            },
+            "capacities": {
+              "vCpu": "2",
+              "ram": "8",
+              "dataDisks": "4",
+              "tempStorage": "50"
+            }
+          },
+          {
+            "name": "[variables('nt2VmName')]",
+            "applicationPorts": {
+              "endPort": "[variables('ntapplicationEndPort')]",
+              "startPort": "[variables('ntapplicationStartPort')]"
+            },
+            "clientConnectionEndpointPort": "[variables('ntfabricTcpGatewayPort')]",
+            "durabilityLevel": "Bronze",
+            "ephemeralPorts": {
+              "endPort": "[variables('ntephemeralEndPort')]",
+              "startPort": "[variables('ntephemeralStartPort')]"
+            },
+            "httpGatewayEndpointPort": "[variables('ntfabricHttpGatewayPort')]",
+            "isPrimary": false,
+            "reverseProxyEndpointPort": "[variables('ntreverseProxyEndpointPort')]",
+            "vmInstanceCount": "[parameters('sfNodeTypes').elasticNodeType.instanceCount]",
+            "placementProperties": {
+              "type": "elastic"
+            },
+            "capacities": {
+              "vCpu": "2",
+              "ram": "8",
+              "dataDisks": "4",
+              "tempStorage": "16"
+            }
+          }
+        ],
+        "provisioningState": "Default",
+        "reliabilityLevel": "Bronze",
+        "upgradeMode": "Automatic",
+        "vmImage": "Windows"
+      },
+      "tags": {
+        "Scope": "EdGraph",
+        "Type": "Service Fabric"
+      }
+    },
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2018-11-30",
+      "name": "[variables('appGatewayKeyVaultIdentity')]",
+      "location": "[variables('locationObject').Name]",
+      "properties": {},
+      "tags": {
+        "Scope": "EdGraph",
+        "Type": "Security"
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2019-04-01",
+      "name": "[variables('appGatewayIPName')]",
+      "location": "[variables('locationObject').Name]",
+      "sku": {
+        "name": "Standard"
+      },
+      "properties": {
+        "dnsSettings": {
+          "domainNameLabel": "[variables('appGatewayDnsName')]"
+        },
+        "publicIPAllocationMethod": "Static"
+      },
+      "tags": {
+        "Scope": "EdGraph",
+        "Type": "Infrastructure"
+      }
+    },
+    {
+      "name": "[variables('appGatewayName')]",
+      "apiVersion": "2019-04-01",
+      "type": "Microsoft.Network/applicationGateways",
+      "location": "[variables('locationObject').Name]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/publicIPAddresses/', variables('appGatewayIPName'))]",
+        "[concat('Microsoft.ManagedIdentity/userAssignedIdentities/', variables('appGatewayKeyVaultIdentity'))]"
+      ],
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('appGatewayKeyVaultIdentity'))]": {}
+        }
+      },
+      "properties": {
+        "sku": {
+          "name": "[parameters('appGatewaySkuName')]",
+          "tier": "[parameters('appGatewaySkuTier')]"
+        },
+        "autoscaleConfiguration": {
+          "minCapacity": "[parameters('appGatewayMinimumCapacity')]",
+          "maxCapacity": "[parameters('appGatewayMaximumCapacity')]"
+        },
+        "enableHttp2": true,
+        "webApplicationFirewallConfiguration": {
+          "enabled": true,
+          "firewallMode": "Detection",
+          "ruleSetType": "OWASP",
+          "ruleSetVersion": "3.0"
+        },
+        "sslPolicy": {
+          "policyType": "Predefined",
+          "policyName": "AppGwSslPolicy20170401S"
+        },
+        "sslCertificates": [
+          {
+            "name": "[variables('appGatewayCertificateSslName')]",
+            "properties": {
+              "keyVaultSecretId": "[parameters('certificates').sslCertificate.certificateSecretKeyVaultUrl]"
+            }
+          }
+        ],
+        "gatewayIPConfigurations": [
+          {
+            "name": "appGatewayIpConfig",
+            "properties": {
+              "subnet": {
+                "id": "[variables('appGatewaySubnetRef')]"
+              }
+            }
+          }
+        ],
+        //"trustedRootCertificates": [
+        //  {
+        //    "name": "sslGatewayBackendCert",
+        //    "properties": {
+        //      "data": "[parameters('sslPublicCertData')]"
+        //    }
+        //  }
+        //],
+        "frontendIPConfigurations": [
+          {
+            "name": "appGatewayFrontendIP",
+            "properties": {
+              "PublicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('appGatewayIPName'))]"
+              }
+            }
+          }
+        ],
+        "frontendPorts": [
+          {
+            "name": "appGatewayFrontendPortHttps",
+            "properties": {
+              "Port": 443
+            }
+          },
+          {
+            "name": "appGatewayFrontendPortHttp",
+            "properties": {
+              "Port": 80
+            }
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "sfBackendPool",
+            "properties": {
+              "backendAddresses": [
+                {
+                  "fqdn": "[concat(parameters('dnsZone').sfClusterDns, '.', parameters('dnsZone').zoneName)]"
+                }
+              ]
+            }
+          },
+          {
+            "name": "apimBackendPool",
+            "properties": {
+              "backendAddresses": [
+                {
+                  "ipAddress": "[concat(parameters('vnet').addressSpacePrefix, '.1.5')]"
+                }
+              ]
+            }
+          }
+        ],
+        "backendHttpSettingsCollection": [
+          {
+            "name": "apimGatewayBackendHttpsSetting",
+            "properties": {
+              "port": 443,
+              "protocol": "Https",
+              "cookieBasedAffinity": "Disabled",
+              "requestTimeout": 180,
+              "probe": {
+                "id": "[concat(variables('appGatewayID'), '/probes/apimGatewayHttpsHealthProbe')]"
+              },
+              "pickHostNameFromBackendAddress": false,
+              "probeEnabled": true
+            }
+          },
+          {
+            "name": "apimManagementBackendHttpsSetting",
+            "properties": {
+              "port": 443,
+              "protocol": "Https",
+              "cookieBasedAffinity": "Disabled",
+              "requestTimeout": 180,
+              "probe": {
+                "id": "[concat(variables('appGatewayID'), '/probes/apimManagementHttpsHealthProbe')]"
+              },
+              "pickHostNameFromBackendAddress": false,
+              "probeEnabled": true
+            }
+          },
+          {
+            "name": "apimPortalBackendHttpsSetting",
+            "properties": {
+              "port": 443,
+              "protocol": "Https",
+              "cookieBasedAffinity": "Disabled",
+              "requestTimeout": 180,
+              "probe": {
+                "id": "[concat(variables('appGatewayID'), '/probes/apimPortalHttpsHealthProbe')]"
+              },
+              "pickHostNameFromBackendAddress": false,
+              "probeEnabled": true
+            }
+          },
+          {
+            "name": "traefikMarketingBackendHttpsSetting",
+            "properties": {
+              "port": 44300,
+              "protocol": "Http",
+              "cookieBasedAffinity": "Disabled",
+              "requestTimeout": 20,
+              "probe": {
+                "id": "[concat(variables('appGatewayID'), '/probes/traefikMarketingHttpsHealthProbe')]"
+              },
+              "pickHostNameFromBackendAddress": false,
+              "probeEnabled": true
+            }
+          },
+          {
+            "name": "traefikLoginBackendHttpsSetting",
+            "properties": {
+              "port": 44301,
+              "protocol": "Http",
+              "cookieBasedAffinity": "Disabled",
+              "requestTimeout": 20,
+              "probe": {
+                "id": "[concat(variables('appGatewayID'), '/probes/traefikLoginHttpsHealthProbe')]"
+              },
+              "pickHostNameFromBackendAddress": false,
+              "probeEnabled": true
+            }
+          },
+          {
+            "name": "traefikPortalBackendHttpsSetting",
+            "properties": {
+              "port": 44302,
+              "protocol": "Http",
+              "cookieBasedAffinity": "Disabled",
+              "requestTimeout": 20,
+              "probe": {
+                "id": "[concat(variables('appGatewayID'), '/probes/traefikPortalHttpsHealthProbe')]"
+              },
+              "pickHostNameFromBackendAddress": false,
+              "probeEnabled": true
+            }
+          },
+          {
+            "name": "traefikAdminBackendHttpsSetting",
+            "properties": {
+              "port": 44303,
+              "protocol": "Http",
+              "cookieBasedAffinity": "Disabled",
+              "requestTimeout": 20,
+              "probe": {
+                "id": "[concat(variables('appGatewayID'), '/probes/traefikAdminHttpsHealthProbe')]"
+              },
+              "pickHostNameFromBackendAddress": false,
+              "probeEnabled": true
+            }
+          }
+        ],
+        "httpListeners": [
+          {
+            "name": "apimGatewayHttpsListener",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('appGatewayID'), '/frontendIPConfigurations/appGatewayFrontendIP')]"
+              },
+              "frontendPort": {
+                "id": "[concat(variables('appGatewayID'), '/frontendPorts/appGatewayFrontendPortHttps')]"
+              },
+              "protocol": "Https",
+              "hostName": "[concat(parameters('dnsZone').cnameRecords[5], '.', parameters('dnsZone').zoneName)]",
+              "requireServerNameIndication": true,
+              "sslCertificate": {
+                "id": "[concat(variables('appGatewayID'), '/sslCertificates/', variables('appGatewayCertificateSslName'))]"
+              }
+            }
+          },
+          {
+            "name": "loginWebHttpsListener",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('appGatewayID'), '/frontendIPConfigurations/appGatewayFrontendIP')]"
+              },
+              "frontendPort": {
+                "id": "[concat(variables('appGatewayID'), '/frontendPorts/appGatewayFrontendPortHttps')]"
+              },
+              "protocol": "Https",
+              "hostName": "[concat(parameters('dnsZone').cnameRecords[2], '.', parameters('dnsZone').zoneName)]",
+              "requireServerNameIndication": true,
+              "sslCertificate": {
+                "id": "[concat(variables('appGatewayID'), '/sslCertificates/', variables('appGatewayCertificateSslName'))]"
+              }
+            }
+          },
+          {
+            "name": "loginWebHttpListener",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('appGatewayID'), '/frontendIPConfigurations/appGatewayFrontendIP')]"
+              },
+              "frontendPort": {
+                "id": "[concat(variables('appGatewayID'), '/frontendPorts/appGatewayFrontendPortHttp')]"
+              },
+              "protocol": "Http",
+              "hostName": "[concat(parameters('dnsZone').cnameRecords[2], '.', parameters('dnsZone').zoneName)]",
+              "requireServerNameIndication": false
+            }
+          },
+          {
+            "name": "portalWebHttpsListener",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('appGatewayID'), '/frontendIPConfigurations/appGatewayFrontendIP')]"
+              },
+              "frontendPort": {
+                "id": "[concat(variables('appGatewayID'), '/frontendPorts/appGatewayFrontendPortHttps')]"
+              },
+              "protocol": "Https",
+              "hostName": "[concat(parameters('dnsZone').cnameRecords[4], '.', parameters('dnsZone').zoneName)]",
+              "requireServerNameIndication": true,
+              "sslCertificate": {
+                "id": "[concat(variables('appGatewayID'), '/sslCertificates/', variables('appGatewayCertificateSslName'))]"
+              }
+            }
+          },
+          {
+            "name": "portalWebHttpListener",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('appGatewayID'), '/frontendIPConfigurations/appGatewayFrontendIP')]"
+              },
+              "frontendPort": {
+                "id": "[concat(variables('appGatewayID'), '/frontendPorts/appGatewayFrontendPortHttp')]"
+              },
+              "protocol": "Http",
+              "hostName": "[concat(parameters('dnsZone').cnameRecords[4], '.', parameters('dnsZone').zoneName)]",
+              "requireServerNameIndication": false
+            }
+          },
+          {
+            "name": "marketingWebHttpsListener",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('appGatewayID'), '/frontendIPConfigurations/appGatewayFrontendIP')]"
+              },
+              "frontendPort": {
+                "id": "[concat(variables('appGatewayID'), '/frontendPorts/appGatewayFrontendPortHttps')]"
+              },
+              "protocol": "Https",
+              "hostName": "[concat(parameters('dnsZone').cnameRecords[1], '.', parameters('dnsZone').zoneName)]",
+              "requireServerNameIndication": true,
+              "sslCertificate": {
+                "id": "[concat(variables('appGatewayID'), '/sslCertificates/', variables('appGatewayCertificateSslName'))]"
+              }
+            }
+          },
+          {
+            "name": "marketingRootWebHttpsListener",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('appGatewayID'), '/frontendIPConfigurations/appGatewayFrontendIP')]"
+              },
+              "frontendPort": {
+                "id": "[concat(variables('appGatewayID'), '/frontendPorts/appGatewayFrontendPortHttps')]"
+              },
+              "protocol": "Https",
+              "hostName": "[parameters('dnsZone').zoneName]",
+              "requireServerNameIndication": true,
+              "sslCertificate": {
+                "id": "[concat(variables('appGatewayID'), '/sslCertificates/', variables('appGatewayCertificateSslName'))]"
+              }
+            }
+          },
+          {
+            "name": "marketingRootWebHttpListener",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('appGatewayID'), '/frontendIPConfigurations/appGatewayFrontendIP')]"
+              },
+              "frontendPort": {
+                "id": "[concat(variables('appGatewayID'), '/frontendPorts/appGatewayFrontendPortHttp')]"
+              },
+              "protocol": "Http",
+              "hostName": "[parameters('dnsZone').zoneName]",
+              "requireServerNameIndication": false
+            }
+          },
+          {
+            "name": "marketingWebHttpListener",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('appGatewayID'), '/frontendIPConfigurations/appGatewayFrontendIP')]"
+              },
+              "frontendPort": {
+                "id": "[concat(variables('appGatewayID'), '/frontendPorts/appGatewayFrontendPortHttp')]"
+              },
+              "protocol": "Http",
+              "hostName": "[concat(parameters('dnsZone').cnameRecords[1], '.', parameters('dnsZone').zoneName)]",
+              "requireServerNameIndication": false
+            }
+          },
+          {
+            "name": "adminWebHttpsListener",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('appGatewayID'), '/frontendIPConfigurations/appGatewayFrontendIP')]"
+              },
+              "frontendPort": {
+                "id": "[concat(variables('appGatewayID'), '/frontendPorts/appGatewayFrontendPortHttps')]"
+              },
+              "protocol": "Https",
+              "hostName": "[concat(parameters('dnsZone').cnameRecords[3], '.', parameters('dnsZone').zoneName)]",
+              "requireServerNameIndication": true,
+              "sslCertificate": {
+                "id": "[concat(variables('appGatewayID'), '/sslCertificates/', variables('appGatewayCertificateSslName'))]"
+              }
+            }
+          },
+          {
+            "name": "adminWebHttpListener",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('appGatewayID'), '/frontendIPConfigurations/appGatewayFrontendIP')]"
+              },
+              "frontendPort": {
+                "id": "[concat(variables('appGatewayID'), '/frontendPorts/appGatewayFrontendPortHttp')]"
+              },
+              "protocol": "Http",
+              "hostName": "[concat(parameters('dnsZone').cnameRecords[3], '.', parameters('dnsZone').zoneName)]",
+              "requireServerNameIndication": false
+            }
+          },
+          {
+            "name": "apimManagementHttpsListener",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('appGatewayID'), '/frontendIPConfigurations/appGatewayFrontendIP')]"
+              },
+              "frontendPort": {
+                "id": "[concat(variables('appGatewayID'), '/frontendPorts/appGatewayFrontendPortHttps')]"
+              },
+              "protocol": "Https",
+              "hostName": "[concat(parameters('dnsZone').cnameRecords[7], '.', parameters('dnsZone').zoneName)]",
+              "requireServerNameIndication": true,
+              "sslCertificate": {
+                "id": "[concat(variables('appGatewayID'), '/sslCertificates/', variables('appGatewayCertificateSslName'))]"
+              }
+            }
+          },
+          {
+            "name": "apimPortalHttpsListener",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('appGatewayID'), '/frontendIPConfigurations/appGatewayFrontendIP')]"
+              },
+              "frontendPort": {
+                "id": "[concat(variables('appGatewayID'), '/frontendPorts/appGatewayFrontendPortHttps')]"
+              },
+              "protocol": "Https",
+              "hostName": "[concat(parameters('dnsZone').cnameRecords[6], '.', parameters('dnsZone').zoneName)]",
+              "requireServerNameIndication": true,
+              "sslCertificate": {
+                "id": "[concat(variables('appGatewayID'), '/sslCertificates/', variables('appGatewayCertificateSslName'))]"
+              }
+            }
+          },
+          {
+            "name": "catchallWebHttpListener",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('appGatewayID'), '/frontendIPConfigurations/appGatewayFrontendIP')]"
+              },
+              "frontendPort": {
+                "id": "[concat(variables('appGatewayID'), '/frontendPorts/appGatewayFrontendPortHttp')]"
+              },
+              "protocol": "Http",
+              "requireServerNameIndication": false
+            }
+          },
+          {
+            "name": "catchallWebHttpsListener",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('appGatewayID'), '/frontendIPConfigurations/appGatewayFrontendIP')]"
+              },
+              "frontendPort": {
+                "id": "[concat(variables('appGatewayID'), '/frontendPorts/appGatewayFrontendPortHttps')]"
+              },
+              "protocol": "Https",
+              "requireServerNameIndication": false,
+              "sslCertificate": {
+                "id": "[concat(variables('appGatewayID'), '/sslCertificates/', variables('appGatewayCertificateSslName'))]"
+              }
+            }
+          }
+        ],
+        "requestRoutingRules": [
+          {
+            "Name": "marketingRootWebHttpToMarketingWebHttps",
+            "properties": {
+              "ruleType": "Basic",
+              "httpListener": {
+                "id": "[concat(variables('appGatewayID'), '/httpListeners/marketingRootWebHttpListener')]"
+              },
+              "redirectConfiguration": {
+                "id": "[concat(variables('appGatewayID'), '/redirectConfigurations/marketingWebHttpToHttps')]"
+              }
+            }
+          },
+          {
+            "Name": "marketingRootWebHttpsToMarketingWebHttps",
+            "properties": {
+              "ruleType": "Basic",
+              "httpListener": {
+                "id": "[concat(variables('appGatewayID'), '/httpListeners/marketingRootWebHttpsListener')]"
+              },
+              "redirectConfiguration": {
+                "id": "[concat(variables('appGatewayID'), '/redirectConfigurations/marketingWebHttpToHttps')]"
+              }
+            }
+          },
+          {
+            "Name": "marketingWebHttpToHttps",
+            "properties": {
+              "ruleType": "Basic",
+              "httpListener": {
+                "id": "[concat(variables('appGatewayID'), '/httpListeners/marketingWebHttpListener')]"
+              },
+              "redirectConfiguration": {
+                "id": "[concat(variables('appGatewayID'), '/redirectConfigurations/marketingWebHttpToHttps')]"
+              }
+            }
+          },
+          {
+            "Name": "marketingWebBackendPoolSslTermination",
+            "properties": {
+              "ruleType": "Basic",
+              "httpListener": {
+                "id": "[concat(variables('appGatewayID'), '/httpListeners/marketingWebHttpsListener')]"
+              },
+              "backendAddressPool": {
+                "id": "[concat(variables('appGatewayID'), '/backendAddressPools/sfBackendPool')]"
+              },
+              "backendHttpSettings": {
+                "id": "[concat(variables('appGatewayID'), '/backendHttpSettingsCollection/traefikMarketingBackendHttpsSetting')]"
+              },
+              "rewriteRuleSet": {
+                "id": "[concat(variables('appGatewayID'), '/rewriteRuleSets/hstsRewriteRuleSet')]"
+              }
+            }
+          },
+          {
+            "Name": "loginWebHttpToHttps",
+            "properties": {
+              "ruleType": "Basic",
+              "httpListener": {
+                "id": "[concat(variables('appGatewayID'), '/httpListeners/loginWebHttpListener')]"
+              },
+              "redirectConfiguration": {
+                "id": "[concat(variables('appGatewayID'), '/redirectConfigurations/loginWebHttpToHttps')]"
+              }
+            }
+          },
+          {
+            "Name": "loginWebBackendPoolSslTermination",
+            "properties": {
+              "ruleType": "Basic",
+              "httpListener": {
+                "id": "[concat(variables('appGatewayID'), '/httpListeners/loginWebHttpsListener')]"
+              },
+              "backendAddressPool": {
+                "id": "[concat(variables('appGatewayID'), '/backendAddressPools/sfBackendPool')]"
+              },
+              "backendHttpSettings": {
+                "id": "[concat(variables('appGatewayID'), '/backendHttpSettingsCollection/traefikLoginBackendHttpsSetting')]"
+              },
+              "rewriteRuleSet": {
+                "id": "[concat(variables('appGatewayID'), '/rewriteRuleSets/hstsRewriteRuleSet')]"
+              }
+            }
+          },
+          {
+            "Name": "portalWebHttpToHttps",
+            "properties": {
+              "ruleType": "Basic",
+              "httpListener": {
+                "id": "[concat(variables('appGatewayID'), '/httpListeners/portalWebHttpListener')]"
+              },
+              "redirectConfiguration": {
+                "id": "[concat(variables('appGatewayID'), '/redirectConfigurations/portalWebHttpToHttps')]"
+              }
+            }
+          },
+          {
+            "Name": "portalWebBackendPoolSslTermination",
+            "properties": {
+              "ruleType": "Basic",
+              "httpListener": {
+                "id": "[concat(variables('appGatewayID'), '/httpListeners/portalWebHttpsListener')]"
+              },
+              "backendAddressPool": {
+                "id": "[concat(variables('appGatewayID'), '/backendAddressPools/sfBackendPool')]"
+              },
+              "backendHttpSettings": {
+                "id": "[concat(variables('appGatewayID'), '/backendHttpSettingsCollection/traefikPortalBackendHttpsSetting')]"
+              },
+              "rewriteRuleSet": {
+                "id": "[concat(variables('appGatewayID'), '/rewriteRuleSets/hstsRewriteRuleSet')]"
+              }
+            }
+          },
+          {
+            "Name": "adminWebHttpToHttps",
+            "properties": {
+              "ruleType": "Basic",
+              "httpListener": {
+                "id": "[concat(variables('appGatewayID'), '/httpListeners/adminWebHttpListener')]"
+              },
+              "redirectConfiguration": {
+                "id": "[concat(variables('appGatewayID'), '/redirectConfigurations/adminWebHttpToHttps')]"
+              }
+            }
+          },
+          {
+            "Name": "adminWebBackendPoolSslTermination",
+            "properties": {
+              "ruleType": "Basic",
+              "httpListener": {
+                "id": "[concat(variables('appGatewayID'), '/httpListeners/adminWebHttpsListener')]"
+              },
+              "backendAddressPool": {
+                "id": "[concat(variables('appGatewayID'), '/backendAddressPools/sfBackendPool')]"
+              },
+              "backendHttpSettings": {
+                "id": "[concat(variables('appGatewayID'), '/backendHttpSettingsCollection/traefikAdminBackendHttpsSetting')]"
+              },
+              "rewriteRuleSet": {
+                "id": "[concat(variables('appGatewayID'), '/rewriteRuleSets/hstsRewriteRuleSet')]"
+              }
+            }
+          },
+          {
+            "Name": "apimGatewayBackendPoolSslTermination",
+            "properties": {
+              "ruleType": "Basic",
+              "httpListener": {
+                "id": "[concat(variables('appGatewayID'), '/httpListeners/apimGatewayHttpsListener')]"
+              },
+              "backendAddressPool": {
+                "id": "[concat(variables('appGatewayID'), '/backendAddressPools/apimBackendPool')]"
+              },
+              "backendHttpSettings": {
+                "id": "[concat(variables('appGatewayID'), '/backendHttpSettingsCollection/apimGatewayBackendHttpsSetting')]"
+              },
+              "rewriteRuleSet": {
+                "id": "[concat(variables('appGatewayID'), '/rewriteRuleSets/hstsRewriteRuleSet')]"
+              }
+            }
+          },
+          {
+            "Name": "apimManagamentBackendPoolSslTermination",
+            "properties": {
+              "ruleType": "Basic",
+              "httpListener": {
+                "id": "[concat(variables('appGatewayID'), '/httpListeners/apimManagementHttpsListener')]"
+              },
+              "backendAddressPool": {
+                "id": "[concat(variables('appGatewayID'), '/backendAddressPools/apimBackendPool')]"
+              },
+              "backendHttpSettings": {
+                "id": "[concat(variables('appGatewayID'), '/backendHttpSettingsCollection/apimManagementBackendHttpsSetting')]"
+              },
+              "rewriteRuleSet": {
+                "id": "[concat(variables('appGatewayID'), '/rewriteRuleSets/hstsRewriteRuleSet')]"
+              }
+            }
+          },
+          {
+            "Name": "apimPortalBackendPoolSslTermination",
+            "properties": {
+              "ruleType": "Basic",
+              "httpListener": {
+                "id": "[concat(variables('appGatewayID'), '/httpListeners/apimPortalHttpsListener')]"
+              },
+              "backendAddressPool": {
+                "id": "[concat(variables('appGatewayID'), '/backendAddressPools/apimBackendPool')]"
+              },
+              "backendHttpSettings": {
+                "id": "[concat(variables('appGatewayID'), '/backendHttpSettingsCollection/apimPortalBackendHttpsSetting')]"
+              },
+              "rewriteRuleSet": {
+                "id": "[concat(variables('appGatewayID'), '/rewriteRuleSets/hstsRewriteRuleSet')]"
+              }
+            }
+          },
+          {
+            "Name": "catchallWebHttpToHttps",
+            "properties": {
+              "ruleType": "Basic",
+              "httpListener": {
+                "id": "[concat(variables('appGatewayID'), '/httpListeners/catchallWebHttpListener')]"
+              },
+              "redirectConfiguration": {
+                "id": "[concat(variables('appGatewayID'), '/redirectConfigurations/marketingWebHttpToHttps')]"
+              }
+            }
+          },
+          {
+            "Name": "catchallWebBackendPoolSslTermination",
+            "properties": {
+              "ruleType": "Basic",
+              "httpListener": {
+                "id": "[concat(variables('appGatewayID'), '/httpListeners/catchallWebHttpsListener')]"
+              },
+              "redirectConfiguration": {
+                "id": "[concat(variables('appGatewayID'), '/redirectConfigurations/marketingWebHttpToHttps')]"
+              },
+              "rewriteRuleSet": {
+                "id": "[concat(variables('appGatewayID'), '/rewriteRuleSets/hstsRewriteRuleSet')]"
+              }
+            }
+          }
+        ],
+        "redirectConfigurations": [
+          {
+            "name": "marketingWebHttpToHttps",
+            "properties": {
+              "redirectType": "Permanent",
+              "targetListener": {
+                "id": "[concat(variables('appGatewayID'), '/httpListeners/marketingWebHttpsListener')]"
+              },
+              "includePath": true,
+              "includeQueryString": true
+            }
+          },
+          {
+            "name": "loginWebHttpToHttps",
+            "properties": {
+              "redirectType": "Permanent",
+              "targetListener": {
+                "id": "[concat(variables('appGatewayID'), '/httpListeners/loginWebHttpsListener')]"
+              },
+              "includePath": true,
+              "includeQueryString": true
+            }
+          },
+          {
+            "name": "portalWebHttpToHttps",
+            "properties": {
+              "redirectType": "Permanent",
+              "targetListener": {
+                "id": "[concat(variables('appGatewayID'), '/httpListeners/portalWebHttpsListener')]"
+              },
+              "includePath": true,
+              "includeQueryString": true
+            }
+          },
+          {
+            "name": "adminWebHttpToHttps",
+            "properties": {
+              "redirectType": "Permanent",
+              "targetListener": {
+                "id": "[concat(variables('appGatewayID'), '/httpListeners/adminWebHttpsListener')]"
+              },
+              "includePath": true,
+              "includeQueryString": true
+            }
+          },
+          {
+            "name": "catchallWebHttpToHttps",
+            "properties": {
+              "redirectType": "Permanent",
+              "targetListener": {
+                "id": "[concat(variables('appGatewayID'), '/httpListeners/catchallWebHttpsListener')]"
+              },
+              "includePath": true,
+              "includeQueryString": true
+            }
+          }
+        ],
+        "probes": [
+          {
+            "name": "apimGatewayHttpsHealthProbe",
+            "properties": {
+              "protocol": "Https",
+              "path": "/status-0123456789abcdef",
+              "interval": 30,
+              "timeout": 120,
+              "unhealthyThreshold": 8,
+              "host": "[concat(parameters('dnsZone').cnameRecords[5], '.', parameters('dnsZone').zoneName)]"
+            }
+          },
+          {
+            "name": "apimPortalHttpsHealthProbe",
+            "properties": {
+              "protocol": "Https",
+              "path": "/signin",
+              "interval": 60,
+              "timeout": 300,
+              "unhealthyThreshold": 8,
+              "host": "[concat(parameters('dnsZone').cnameRecords[6], '.', parameters('dnsZone').zoneName)]"
+            }
+          },
+          {
+            "name": "apimManagementHttpsHealthProbe",
+            "properties": {
+              "protocol": "Https",
+              "path": "/apis?api-version=2018-06-01-preview",
+              "interval": 60,
+              "timeout": 300,
+              "unhealthyThreshold": 8,
+              "host": "[concat(parameters('dnsZone').cnameRecords[7], '.', parameters('dnsZone').zoneName)]"
+            }
+          },
+          {
+            "name": "traefikMarketingHttpsHealthProbe",
+            "properties": {
+              "protocol": "Http",
+              "path": "/images/logo_small.png",
+              "interval": 60,
+              "timeout": 300,
+              "unhealthyThreshold": 8,
+              "host": "[concat(parameters('dnsZone').cnameRecords[1], '.', parameters('dnsZone').zoneName)]"
+            }
+          },
+          {
+            "name": "traefikLoginHttpsHealthProbe",
+            "properties": {
+              "protocol": "Http",
+              "path": "/img/logo/favicon.png",
+              "interval": 60,
+              "timeout": 300,
+              "unhealthyThreshold": 8,
+              "host": "[concat(parameters('dnsZone').cnameRecords[2], '.', parameters('dnsZone').zoneName)]"
+            }
+          },
+          {
+            "name": "traefikPortalHttpsHealthProbe",
+            "properties": {
+              "protocol": "Http",
+              "path": "/launcher/favicon.png",
+              "interval": 60,
+              "timeout": 300,
+              "unhealthyThreshold": 8,
+              "host": "[concat(parameters('dnsZone').cnameRecords[4], '.', parameters('dnsZone').zoneName)]"
+            }
+          },
+          {
+            "name": "traefikAdminHttpsHealthProbe",
+            "properties": {
+              "protocol": "Http",
+              "path": "/icon.png",
+              "interval": 60,
+              "timeout": 300,
+              "unhealthyThreshold": 8,
+              "host": "[concat(parameters('dnsZone').cnameRecords[3], '.', parameters('dnsZone').zoneName)]"
+            }
+          }
+        ],
+        "rewriteRuleSets": [
+          {
+            "name": "hstsRewriteRuleSet",
+            "properties": {
+              "rewriteRules": [
+                {
+                  "name": "modifyResponseHeaderRewriteRule",
+                  "actionSet": {
+                    "responseHeaderConfigurations": [
+                      {
+                        "headerName": "Strict-Transport-Security",
+                        "headerValue": "max-age=31536000"
+                      },
+                      {
+                        "headerName": "Server",
+                        "headerValue": ""
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "type": "Microsoft.Network/applicationGateways/rewriteRuleSets"
+          }
+        ]
+      },
+      "tags": {
+        "Scope": "EdGraph",
+        "Type": "Infrastructure"
+      }
+    },
+    {
+      "condition": "[parameters('core').featureToDeploy.apiManagement]",
+      "type": "Microsoft.ApiManagement/service",
+      "apiVersion": "2019-01-01",
+      "name": "[variables('apimInstanceName')]",
+      "location": "[variables('locationObject').Name]",
+      "dependsOn": [],
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "sku": {
+        "name": "[parameters('apim').sku]",
+        "capacity": "[parameters('apim').capacity]"
+      },
+      "properties": {
+        "publisherEmail": "info@edgraph.com",
+        "publisherName": "EdWire, Inc",
+        "runtimeUrl": "[concat('https://', variables('apimInstanceName'),'.azure-api.net')]",
+        "portalUrl": "[concat('https://', variables('apimInstanceName'),'.portal.azure-api.net')]",
+        "managementApiUrl": "[concat('https://', variables('apimInstanceName'),'.management.azure-api.net')]",
+        "scmUrl": "[concat('https://', variables('apimInstanceName'),'.scm.azure-api.net')]",
+        "virtualNetworkType": "Internal",
+        "virtualNetworkConfiguration": {
+          "subnetResourceId": "[variables('apimSubnetId')]"
+        }
+      },
+      "tags": {
+        "Scope": "EdGraph",
+        "Type": "API Management"
+      }
+    },
+    {
+      "condition": "[parameters('core').featureToDeploy.apiManagement]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-05-01",
+      "name": "apimFullDeployment",
+      "dependsOn": [
+        "[resourceId('Microsoft.ApiManagement/service', variables('apimInstanceName'))]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "resources": [
+            {
+              "apiVersion": "2019-01-01",
+              "type": "Microsoft.ApiManagement/service",
+              "name": "[variables('apimInstanceName')]",
+              "location": "[variables('locationObject').Name]",
+              "dependsOn": [],
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "sku": {
+                "name": "[parameters('apim').sku]",
+                "capacity": "[parameters('apim').capacity]"
+              },
+              "properties": {
+                "publisherEmail": "info@edgraph.com",
+                "publisherName": "EdWire, Inc",
+                "runtimeUrl": "[concat('https://', variables('apimInstanceName'),'.azure-api.net')]",
+                "portalUrl": "[concat('https://', variables('apimInstanceName'),'.portal.azure-api.net')]",
+                "managementApiUrl": "[concat('https://', variables('apimInstanceName'),'.management.azure-api.net')]",
+                "scmUrl": "[concat('https://', variables('apimInstanceName'),'.scm.azure-api.net')]",
+                "hostnameConfigurations": [
+                  {
+                    "type": "Proxy",
+                    "hostname": "[concat(parameters('dnsZone').cnameRecords[5], '.', parameters('dnsZone').zoneName)]",
+                    "keyVaultId": "[parameters('certificates').sslCertificate.certificateSecretKeyVaultUrl]"
+                  },
+                  {
+                    "type": "Portal",
+                    "hostname": "[concat(parameters('dnsZone').cnameRecords[6], '.', parameters('dnsZone').zoneName)]",
+                    "keyVaultId": "[parameters('certificates').sslCertificate.certificateSecretKeyVaultUrl]"
+                  },
+                  {
+                    "type": "Management",
+                    "hostname": "[concat(parameters('dnsZone').cnameRecords[7], '.', parameters('dnsZone').zoneName)]",
+                    "keyVaultId": "[parameters('certificates').sslCertificate.certificateSecretKeyVaultUrl]"
+                  }
+                ],
+                "virtualNetworkType": "Internal",
+                "virtualNetworkConfiguration": {
+                  "subnetResourceId": "[variables('apimSubnetId')]"
+                }
+              },
+              "tags": {
+                "Scope": "EdGraph",
+                "Type": "API Management"
+              }
+            },
+            {
+              "apiVersion": "2019-01-01",
+              "type": "Microsoft.ApiManagement/service/certificates",
+              "name": "[concat(variables('apimInstanceName'), '/certificate-pfx')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service', variables('apimInstanceName'))]"
+              ],
+              "properties": {
+                "data": "[parameters('certificates').sslCertificate.certificateBase64]",
+                "password": ""
+              }
+            },
+            {
+              "apiVersion": "2019-01-01",
+              "type": "Microsoft.ApiManagement/service/backends",
+              "name": "[concat(variables('apimInstanceName'), '/servicefabric')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service', variables('apimInstanceName'))]",
+                "[resourceId('Microsoft.ApiManagement/service/certificates', variables('apimInstanceName'), 'certificate-pfx')]"
+              ],
+              "properties": {
+                "description": "Service Fabric Backend",
+                "url": "fabric:/fake/service",
+                "protocol": "http",
+                "resourceId": "[variables('sfClusterMangementEndpoint')]",
+                "properties": {
+                  "serviceFabricCluster": {
+                    "managementEndpoints": [
+                      "[variables('sfClusterMangementEndpoint')]"
+                    ],
+                    "clientCertificateThumbprint": "[parameters('certificates').sslCertificate.certificateThumbprint]",
+                    "serverCertificateThumbprints": [
+                      "[parameters('certificates').sslCertificate.certificateThumbprint]"
+                    ],
+                    "maxPartitionResolutionRetries": 5
+                  }
+                }
+              }
+            },
+            {
+              "apiVersion": "2019-01-01",
+              "type": "Microsoft.ApiManagement/service/products",
+              "name": "[concat(variables('apimInstanceName'), '/anonymous')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service', variables('apimInstanceName'))]"
+              ],
+              "properties": {
+                "displayName": "Anonymous",
+                "description": "Anonymous",
+                "subscriptionRequired": false,
+                "state": "published"
+              }
+            },
+            {
+              "apiVersion": "2019-01-01",
+              "type": "Microsoft.ApiManagement/service/products",
+              "name": "[concat(variables('apimInstanceName'), '/starter')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service', variables('apimInstanceName'))]"
+              ],
+              "properties": {
+                "displayName": "Starters",
+                "description": "Subscribers will be able to run 5 calls/minute up to a maximum of 100 calls/week.",
+                "subscriptionRequired": true,
+                "approvalRequired": false,
+                "subscriptionsLimit": 1,
+                "state": "published"
+              }
+            },
+            {
+              "apiVersion": "2019-01-01",
+              "type": "Microsoft.ApiManagement/service/products",
+              "name": "[concat(variables('apimInstanceName'), '/unlimited')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service', variables('apimInstanceName'))]"
+              ],
+              "properties": {
+                "displayName": "Unlimited",
+                "description": "Subscribers have unlimited access to the API. Administrator approval is required.')]",
+                "subscriptionRequired": true,
+                "approvalRequired": true,
+                "subscriptionsLimit": 1,
+                "state": "published"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-05-01",
+      "name": "dnsZone-sfClusterDns",
+      "resourceGroup": "eg-corp-dev-global",
+      "properties": {
+        "mode": "Incremental",
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "resources": [
+            {
+              "name": "[concat(parameters('dnsZone').zoneName, '/', parameters('dnsZone').sfClusterDns)]",
+              "type": "Microsoft.Network/dnsZones/A",
+              "apiVersion": "2018-05-01",
+              "location": "global",
+              "dependsOn": [],
+              "properties": {
+                "TTL": 60,
+                "ARecords": [
+                  {
+                    "ipv4Address": "[reference(concat('Microsoft.Network/loadBalancers/', variables('internalNt0LBName')), '2015-05-01-preview').frontEndIPConfigurations[0].properties.privateIPAddress]"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-05-01",
+      "name": "[concat('dnsZone-cNameRecords-', copyIndex())]",
+      "resourceGroup": "eg-corp-dev-global",
+      "copy": {
+        "name": "cnameRecords",
+        "count": "[length(parameters('dnsZone').cnameRecords)]"
+      },
+      "properties": {
+        "mode": "Incremental",
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "resources": [
+            {
+              "apiVersion": "2018-05-01",
+              "type": "Microsoft.Network/dnsZones/CNAME",
+              "name": "[concat(parameters('dnsZone').zoneName, '/', parameters('dnsZone').cnameRecords[copyIndex()])]",
+              "location": "global",
+              "dependsOn": [],
+              "properties": {
+                "TTL": 60,
+                "CNAMERecord": {
+                  "cname": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('appGatewayIPName')), '2019-04-01').dnsSettings.fqdn]"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "condition": "[parameters('core').featureToDeploy.cosmosDb]",
+      "apiVersion": "2019-08-01",
+      "type": "Microsoft.DocumentDB/databaseAccounts",
+      "name": "[variables('cosmosdbServerName')]",
+      "location": "[variables('locationObject').Name]",
+      "kind": "GlobalDocumentDB",
+      "properties": {
+        "ipRangeFilter": "104.42.195.92,40.76.54.131,52.176.6.30,52.169.50.45,52.187.184.26",
+        "enableAutomaticFailover": false,
+        "enableMultipleWriteLocations": false,
+        "isVirtualNetworkFilterEnabled": true,
+        "virtualNetworkRules": [
+          {
+            "id": "[variables('sfNt0SubnetRef')]"
+          },
+          {
+            "id": "[variables('sfNt1SubnetRef')]"
+          },
+          {
+            "id": "[variables('sfNt2SubnetRef')]"
+          },
+          {
+            "id": "[variables('devopsSubnetRef')]"
+          },
+          {
+            "id": "[variables('vpnSubnetRef')]"
+          }
+        ],
+        "databaseAccountOfferType": "Standard",
+        "consistencyPolicy": {
+          "defaultConsistencyLevel": "Session",
+          "maxIntervalInSeconds": 5,
+          "maxStalenessPrefix": 100
+        },
+        "locations": [
+          {
+            "locationName": "[variables('locationObject').Name]",
+            "failoverPriority": 0
+          }
+        ],
+        "capabilities": []
+      },
+      "tags": {
+        "Scope": "EdGraph",
+        "Type": "Data"
+      }
+    }
+  ],
+  "outputs": {
+    "location": {
+      "type": "object",
+      "value": "[variables('locationObject')]"
+    },
+    "core": {
+      "type": "object",
+      "value": "[parameters('core')]"
+    }
+  }
+}

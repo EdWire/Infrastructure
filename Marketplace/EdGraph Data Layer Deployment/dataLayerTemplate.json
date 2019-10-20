@@ -1,0 +1,514 @@
+// Pre-Deployment steps
+// 1- Create SSL certificate  (parameters => certificates)
+// 2- Create Data Encipherment certificate  (parameters => certificates)
+// 3- Create Resource Group
+// 4- Create KeyVault and upload above certificates  (parameters => certificates)
+//    - Keyvault must be in same region as deployment  (parameters => certificates)
+// 5- Create Azure AD security group for Administrators  (parameters => aadAdminSecurityGroupObjectId)
+// 6- (Optional) If using VPN, create a P2SRoot and P2SChild certificate  (parameters => vpn)
+
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0001",
+  "parameters": {
+    "core": {
+      "type": "object",
+      "defaultValue": {
+        "resourcePrefix": {},
+        "environment": {}
+      },
+      "metadata": {
+        "description": "Configuration settings that are common to all resources."
+      }
+    },
+    "deployVnet": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Import all Ed-Fi databases"
+      }
+    },
+    "sqlServerVersion": {
+      "type": "string",
+      "defaultValue": "12.0",
+      "allowedValues": [
+        "12.0"
+      ],
+      "metadata": {
+        "description": "Version of SQL server"
+      }
+    },
+    "sqlServerAdminLogin": {
+      "type": "string",
+      "defaultValue": "[concat(replace(parameters('core').resourcePrefix.shortName, '-', ''), 'sql', parameters('core').environment.name)]",
+      "metadata": {
+        "description": "Username for the SQL Server Database login"
+      }
+    },
+    "sqlServerAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Password for the SQL Server Database login"
+      }
+    },
+    "aadAdminGroup": {
+      "type": "object",
+      "defaultValue": {
+        "enabled": false
+      },
+      "metadata": {
+        "description": "Azure Active Directory user or security group for SQL Server Windows login"
+      }
+    },
+    "skuName": {
+      "type": "string",
+      "defaultValue": "GP_Gen4",
+      "metadata": {
+        "description": "Elastic Pool Sku Name"
+      }
+    },
+    "skuTier": {
+      "type": "string",
+      "defaultValue": "GeneralPurpose",
+      "metadata": {
+        "description": "Elastic Pool Sku Tier"
+      }
+    },
+    "skuCapacity": {
+      "type": "string",
+      "defaultValue": "1",
+      "metadata": {
+        "description": "Elastic Pool number of vCore"
+      }
+    },
+    "maxSizeBytes": {
+      "type": "int",
+      "defaultValue": 53687091200,
+      "metadata": {
+        "description": "Elastic Pool size of the hard drive in bytes"
+      }
+    },
+    "perDatabasePerformanceMin": {
+      "type": "string",
+      "defaultValue": "0",
+      "metadata": {
+        "description": "Elastic Pool minimum vCore assigned to a single database"
+      }
+    },
+    "perDatabasePerformanceMax": {
+      "type": "string",
+      "defaultValue": "1",
+      "metadata": {
+        "description": "Elastic Pool maximum vCore assigned to a single database"
+      }
+    },
+    "zoneRedundant": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "SQL Server enabled for zone availability"
+      }
+    },
+    "licenseType": {
+      "type": "string",
+      "defaultValue": "BasePrice",
+      "allowedValues": [
+        "LicenseIncluded",
+        "BasePrice"
+      ],
+      "metadata": {
+        "description": "SQL Server licensing type"
+      }
+    },
+    "allowAzureIps": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Allow other Azure services to connect to this SQL Server"
+      }
+    },
+    "edfiDatabases": {
+      "type": "object",
+      "defaultValue": {
+        "enabled": false
+      },
+      "metadata": {
+        "description": "Create Ed-Fi databases for a tenant"
+      }
+    }
+  },
+  "variables": {
+    // Common
+    "locationMap": {
+      "SouthCentralUS": {
+        "Abbr": "sc",
+        "Code": "scus",
+        "Name": "South Central US"
+      },
+      "EastUS": {
+        "Abbr": "es",
+        "Code": "eastus",
+        "Name": "East US"
+      }
+    },
+    "locationObject": "[variables('locationMap')[resourceGroup().location]]",
+    "azureRegionToControlPlaneIp": {
+      "Central US": "23.101.152.95/32",
+      "East US": "23.101.152.95/32",
+      "East US 2": "23.101.152.95/32",
+      "North Central US": "23.101.152.95/32",
+      "South Central US": "40.83.178.242/32",
+      "West Central US": "40.83.178.242/32",
+      "West US": "40.83.178.242/32",
+      "West US 2": "40.83.178.242/32"
+    },
+    "azureRegionToWebappIp": {
+      "Central US": "40.70.58.221/32",
+      "East US": "40.70.58.221/32",
+      "East US 2": "40.70.58.221/32",
+      "North Central US": "40.70.58.221/32",
+      "South Central US": "40.118.174.12/32",
+      "West Central US": "40.118.174.12/32",
+      "West US": "40.118.174.12/32",
+      "West US 2": "40.118.174.12/32"
+    },
+    "controlPlaneIp": "[variables('azureRegionToControlPlaneIp')[variables('locationObject').Name]]",
+    "webappIp": "[variables('azureRegionToWebappIp')[variables('locationObject').Name]]",
+    // Virtual Network
+    "virtualNetworkName": "[concat(parameters('core').resourcePrefix.shortName, '-vnet-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "vnetId": "[resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]",
+    // Subnets
+    "devopsSubnetName": "DevOpsSubnet",
+    "sfNt0SubnetName": "ServiceFabricNodeType0Subnet",
+    "sfNt1SubnetName": "ServiceFabricNodeType1Subnet",
+    "sfNt2SubnetName": "ServiceFabricNodeType2Subnet",
+    "vpnSubnetName": "GatewaySubnet",
+    "sfNt0SubnetRef": "[concat(variables('vnetId'),'/subnets/', variables('sfNt0SubnetName'))]",
+    "sfNt1SubnetRef": "[concat(variables('vnetId'),'/subnets/', variables('sfNt1SubnetName'))]",
+    "sfNt2SubnetRef": "[concat(variables('vnetId'),'/subnets/', variables('sfNt2SubnetName'))]",
+    "devopsSubnetRef": "[concat(variables('vnetId'),'/subnets/', variables('devopsSubnetName'))]",
+    "vpnSubnetRef": "[concat(variables('vnetId'),'/subnets/', variables('vpnSubnetName'))]",
+    // SQL
+    "sqlServerName": "[concat(parameters('core').resourcePrefix.shortName, '-sql-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "sqlElasticPoolName": "[concat(parameters('core').resourcePrefix.shortName, '-sql-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    // Databases
+    "bacpacBaseUri": {
+      "v2.6": "https://eginternaldevwestus.blob.core.windows.net/sql/Ed-Fi/v2.6/EdGraph/Core.2.6.0.0.20191010.1",
+      "v3.2": "https://eginternaldevwestus.blob.core.windows.net/sql/Ed-Fi/v3.2/EdGraph/Core.3.2.0.0.20191010.1"
+    },
+    "edfiAdminDatabaseName": "[concat('EdFi_Admin_', parameters('edfiDatabases').instanceId)]",
+    "edfiSecurityDatabaseName": "[concat('EdFi_Security_', parameters('edfiDatabases').instanceId)]",
+    "edfiBulkDatabaseName": "[concat('EdFi_Bulk_', parameters('edfiDatabases').instanceId)]",
+    "edfiOdsDatabaseName": "[concat('EdFi_Ods_', parameters('edfiDatabases').instanceId, '_', parameters('edfiDatabases').schoolYear)]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Sql/servers",
+      "apiVersion": "2018-06-01-preview",
+      "name": "[variables('sqlServerName')]",
+      "location": "[variables('locationObject').Name]",
+      "dependsOn": [],
+      "properties": {
+        "administratorLogin": "[parameters('sqlServerAdminLogin')]",
+        "administratorLoginPassword": "[parameters('sqlServerAdminPassword')]",
+        "version": "[parameters('sqlServerVersion')]"
+      },
+      "resources": [
+        {
+          "condition": "[parameters('deployVnet')]",
+          "apiVersion": "2015-05-01-preview",
+          "type": "Microsoft.Sql/servers/virtualNetworkRules",
+          "name": "[concat(variables('sqlServerName'), '/', 'InternalNetwork-ServiceFabricNodeType0Subnet')]",
+          "location": "[variables('locationObject').Name]",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/', variables('sqlServerName'))]"
+          ],
+          "properties": {
+            "virtualNetworkSubnetId": "[variables('sfNt0SubnetRef')]",
+            "ignoreMissingVnetServiceEndpoint": false
+          }
+        },
+        {
+          "condition": "[parameters('deployVnet')]",
+          "apiVersion": "2015-05-01-preview",
+          "type": "Microsoft.Sql/servers/virtualNetworkRules",
+          "name": "[concat(variables('sqlServerName'), '/', 'InternalNetwork-ServiceFabricNodeType1Subnet')]",
+          "location": "[variables('locationObject').Name]",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/', variables('sqlServerName'))]"
+          ],
+          "properties": {
+            "virtualNetworkSubnetId": "[variables('sfNt1SubnetRef')]",
+            "ignoreMissingVnetServiceEndpoint": false
+          }
+        },
+        {
+          "condition": "[parameters('deployVnet')]",
+          "apiVersion": "2015-05-01-preview",
+          "type": "Microsoft.Sql/servers/virtualNetworkRules",
+          "name": "[concat(variables('sqlServerName'), '/', 'InternalNetwork-ServiceFabricNodeType2Subnet')]",
+          "location": "[variables('locationObject').Name]",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/', variables('sqlServerName'))]"
+          ],
+          "properties": {
+            "virtualNetworkSubnetId": "[variables('sfNt2SubnetRef')]",
+            "ignoreMissingVnetServiceEndpoint": false
+          }
+        },
+        {
+          "condition": "[parameters('deployVnet')]",
+          "apiVersion": "2015-05-01-preview",
+          "type": "Microsoft.Sql/servers/virtualNetworkRules",
+          "name": "[concat(variables('sqlServerName'), '/', 'InternalNetwork-DevOpsSubnet')]",
+          "location": "[variables('locationObject').Name]",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/', variables('sqlServerName'))]"
+          ],
+          "properties": {
+            "virtualNetworkSubnetId": "[variables('devopsSubnetRef')]",
+            "ignoreMissingVnetServiceEndpoint": false
+          }
+        },
+        {
+          "condition": "[parameters('deployVnet')]",
+          "apiVersion": "2015-05-01-preview",
+          "type": "Microsoft.Sql/servers/virtualNetworkRules",
+          "name": "[concat(variables('sqlServerName'), '/', 'InternalNetwork-VpnSubnet')]",
+          "location": "[variables('locationObject').Name]",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/', variables('sqlServerName'))]"
+          ],
+          "properties": {
+            "virtualNetworkSubnetId": "[variables('vpnSubnetRef')]",
+            "ignoreMissingVnetServiceEndpoint": false
+          }
+        },
+        {
+          "condition": "[parameters('allowAzureIps')]",
+          "type": "Microsoft.Sql/servers/firewallrules",
+          "apiVersion": "2015-05-01-preview",
+          "name": "[concat(variables('sqlServerName'), '/', 'AllowAllWindowsAzureIps')]",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/', variables('sqlServerName'))]"
+          ],
+          "properties": {
+            "endIpAddress": "0.0.0.0",
+            "startIpAddress": "0.0.0.0"
+          }
+        },
+        {
+          "type": "Microsoft.Sql/servers/connectionPolicies",
+          "apiVersion": "2014-01-01",
+          "name": "[concat(variables('sqlServerName'), '/', 'default')]",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/', variables('sqlServerName'))]"
+          ],
+          "properties": {
+            "connectionType": "Default"
+          }
+        },
+        {
+          "condition": "[parameters('aadAdminGroup').enabled]",
+          "type": "Microsoft.Sql/servers/administrators",
+          "apiVersion": "2014-01-01",
+          "name": "[concat(variables('sqlServerName'), '/', 'ActiveDirectory')]",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/', variables('sqlServerName'))]"
+          ],
+          "properties": {
+            "administratorType": "ActiveDirectory",
+            "login": "[parameters('aadAdminGroup').login]",
+            "sid": "[parameters('aadAdminGroup').objectId]",
+            "tenantId": "[parameters('aadAdminGroup').tenantId]"
+          }
+        },
+        {
+          "type": "Microsoft.Sql/servers/elasticPools",
+          "apiVersion": "2017-10-01-preview",
+          "name": "[concat(variables('sqlServerName'), '/', variables('sqlElasticPoolName'))]",
+          "location": "[variables('locationObject').Name]",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/', variables('sqlServerName'))]"
+          ],
+          "sku": {
+            "name": "[parameters('skuName')]",
+            "tier": "[parameters('skuTier')]",
+            "capacity": "[parameters('skuCapacity')]"
+          },
+          "properties": {
+            "perDatabaseSettings": {
+              "minCapacity": "[parameters('perDatabasePerformanceMin')]",
+              "maxCapacity": "[parameters('perDatabasePerformanceMax')]"
+            },
+            "maxSizeBytes": "[parameters('maxSizeBytes')]",
+            "zoneRedundant": "[parameters('zoneRedundant')]",
+            "licenseType": "[parameters('licenseType')]"
+          },
+          "tags": {
+            "Scope": "EdGraph",
+            "Type": "Data"
+          }
+        },
+        {
+          "condition": "[parameters('edfidatabases').enabled]",
+          "type": "Microsoft.Sql/servers/databases",
+          "apiVersion": "2017-10-01-preview",
+          "name": "[concat(variables('sqlServerName'), '/', variables('edfiAdminDatabaseName'))]",
+          "location": "[variables('locationObject').Name]",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/', variables('sqlServerName'))]",
+            "[resourceId('Microsoft.Sql/servers/elasticPools', variables('sqlServerName'), variables('sqlElasticPoolName'))]"
+          ],
+          "properties": {
+            "elasticPoolId": "[resourceId('Microsoft.Sql/servers/elasticPools', variables('sqlServerName'), variables('sqlElasticPoolName'))]"
+          },
+          "resources": [
+            {
+              "name": "Import",
+              "type": "extensions",
+              "apiVersion": "2014-04-01",
+              "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers/databases', variables('sqlServerName'), variables('edfiAdminDatabaseName'))]"
+              ],
+              "properties": {
+                "storageKeyType": "SharedAccessKey",
+                "storageKey": "?2CH3zBx9kA3Q0hwyJ9iAd/f52NHDkTuCwP7vzOcA95+MDpp2WsHzAqJlQPuvinkTFA8mpj2Y7ZSXS2U4YrUg3Q==",
+                "storageUri": "[concat(variables('bacpacBaseUri')[parameters('edfidatabases').version], '/EdFi_Admin.bacpac')]",
+                "administratorLogin": "[parameters('sqlServerAdminLogin')]",
+                "administratorLoginPassword": "[parameters('sqlServerAdminPassword')]",
+                "operationMode": "Import"
+              }
+            }
+          ],
+          "tags": {
+            "Scope": "EdGraph",
+            "Type": "Data"
+          }
+        },
+        {
+          "condition": "[parameters('edfidatabases').enabled]",
+          "type": "Microsoft.Sql/servers/databases",
+          "apiVersion": "2017-10-01-preview",
+          "name": "[concat(variables('sqlServerName'), '/', variables('edfiSecurityDatabaseName'))]",
+          "location": "[variables('locationObject').Name]",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/', variables('sqlServerName'))]",
+            "[resourceId('Microsoft.Sql/servers/elasticPools', variables('sqlServerName'), variables('sqlElasticPoolName'))]"
+          ],
+          "properties": {
+            "elasticPoolId": "[resourceId('Microsoft.Sql/servers/elasticPools', variables('sqlServerName'), variables('sqlElasticPoolName'))]"
+          },
+          "resources": [
+            {
+              "name": "Import",
+              "type": "extensions",
+              "apiVersion": "2014-04-01",
+              "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers/databases', variables('sqlServerName'), variables('edfiSecurityDatabaseName'))]"
+              ],
+              "properties": {
+                "storageKeyType": "SharedAccessKey",
+                "storageKey": "?2CH3zBx9kA3Q0hwyJ9iAd/f52NHDkTuCwP7vzOcA95+MDpp2WsHzAqJlQPuvinkTFA8mpj2Y7ZSXS2U4YrUg3Q==",
+                "storageUri": "[concat(variables('bacpacBaseUri')[parameters('edfidatabases').version], '/EdFi_Security.bacpac')]",
+                "administratorLogin": "[parameters('sqlServerAdminLogin')]",
+                "administratorLoginPassword": "[parameters('sqlServerAdminPassword')]",
+                "operationMode": "Import"
+              }
+            }
+          ],
+          "tags": {
+            "Scope": "EdGraph",
+            "Type": "Data"
+          }
+        },
+        {
+          "condition": "[parameters('edfidatabases').enabled]",
+          "type": "Microsoft.Sql/servers/databases",
+          "apiVersion": "2017-10-01-preview",
+          "name": "[concat(variables('sqlServerName'), '/', variables('edfiOdsDatabaseName'))]",
+          "location": "[variables('locationObject').Name]",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/', variables('sqlServerName'))]",
+            "[resourceId('Microsoft.Sql/servers/elasticPools', variables('sqlServerName'), variables('sqlElasticPoolName'))]"
+          ],
+          "properties": {
+            "elasticPoolId": "[resourceId('Microsoft.Sql/servers/elasticPools', variables('sqlServerName'), variables('sqlElasticPoolName'))]"
+          },
+          "resources": [
+            {
+              "name": "Import",
+              "type": "extensions",
+              "apiVersion": "2014-04-01",
+              "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers/databases', variables('sqlServerName'), variables('edfiOdsDatabaseName'))]"
+              ],
+              "properties": {
+                "storageKeyType": "SharedAccessKey",
+                "storageKey": "?2CH3zBx9kA3Q0hwyJ9iAd/f52NHDkTuCwP7vzOcA95+MDpp2WsHzAqJlQPuvinkTFA8mpj2Y7ZSXS2U4YrUg3Q==",
+                "storageUri": "[concat(variables('bacpacBaseUri')[parameters('edfidatabases').version], '/EdFi_Ods_Empty.bacpac')]",
+                "administratorLogin": "[parameters('sqlServerAdminLogin')]",
+                "administratorLoginPassword": "[parameters('sqlServerAdminPassword')]",
+                "operationMode": "Import"
+              }
+            }
+          ],
+          "tags": {
+            "Scope": "EdGraph",
+            "Type": "Data"
+          }
+        },
+        {
+          "condition": "[parameters('edfidatabases').enabled]",
+          "type": "Microsoft.Sql/servers/databases",
+          "apiVersion": "2017-10-01-preview",
+          "name": "[concat(variables('sqlServerName'), '/', variables('edfiBulkDatabaseName'))]",
+          "location": "[variables('locationObject').Name]",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/', variables('sqlServerName'))]",
+            "[resourceId('Microsoft.Sql/servers/elasticPools', variables('sqlServerName'), variables('sqlElasticPoolName'))]"
+          ],
+          "properties": {
+            "elasticPoolId": "[resourceId('Microsoft.Sql/servers/elasticPools', variables('sqlServerName'), variables('sqlElasticPoolName'))]"
+          },
+          "resources": [
+            {
+              "name": "Import",
+              "type": "extensions",
+              "apiVersion": "2014-04-01",
+              "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers/databases', variables('sqlServerName'), variables('edfiBulkDatabaseName'))]"
+              ],
+              "properties": {
+                "storageKeyType": "SharedAccessKey",
+                "storageKey": "?2CH3zBx9kA3Q0hwyJ9iAd/f52NHDkTuCwP7vzOcA95+MDpp2WsHzAqJlQPuvinkTFA8mpj2Y7ZSXS2U4YrUg3Q==",
+                "storageUri": "[concat(variables('bacpacBaseUri')[parameters('edfidatabases').version], '/EdFi_Bulk.bacpac')]",
+                "administratorLogin": "[parameters('sqlServerAdminLogin')]",
+                "administratorLoginPassword": "[parameters('sqlServerAdminPassword')]",
+                "operationMode": "Import"
+              }
+            }
+          ],
+          "tags": {
+            "Scope": "EdGraph",
+            "Type": "Data"
+          }
+        }
+      ],
+      "tags": {
+        "Scope": "EdGraph",
+        "Type": "Data"
+      }
+    }
+  ],
+  "outputs": {
+    "location": {
+      "type": "object",
+      "value": "[variables('locationObject')]"
+    },
+    "core": {
+      "type": "object",
+      "value": "[parameters('core')]"
+    }
+  }
+}

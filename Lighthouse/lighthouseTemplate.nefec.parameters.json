@@ -1,0 +1,32 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "mspOfferName": {
+      "value": "NEFEC - Human Capital Portfolio"
+    },
+    "rgName": {
+      "value": "edgraph-prod-eastus"
+    },
+    "mspOfferDescription": {
+      "value": "Deployment of resources related to NEFEC's human capital portfolio"
+    },
+    "managedByTenantId": {
+      "value": "75c35801-20e7-4dc0-8f49-abdbf54894be"
+    },
+    "authorizations": {
+      "value": [
+        {
+          "principalId": "8ce0dc28-cd5e-4287-9877-370afca8c060",
+          "roleDefinitionId": "b24988ac-6180-42a0-ab88-20f7382dd24c",
+          "principalIdDisplayName": "NEFEC-Alachua T3 Tenant Services"
+        },
+        {
+          "principalId": "02aeb7f5-8846-4805-a57c-bcdecf2fed9e",
+          "roleDefinitionId": "b24988ac-6180-42a0-ab88-20f7382dd24c",
+          "principalIdDisplayName": "NEFEC-Alachua-AutomationAccount"
+        }
+      ]
+    }
+  }
+}

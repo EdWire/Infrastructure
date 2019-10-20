@@ -1,13 +1,30 @@
+﻿#---------------------------
+# Summary
+#---------------------------
+
+
+#---------------------------
+# Notes
+#---------------------------
+
+# Prior to running this script, you must...
+#   - Upload SSL and DataEncipherment Certificate to KeyVault
+#     - Use the KeyVault Resource ID and Certificate's Secret Url in the parameters file
+#   - Create Azure AD Application for access to the SF Cluster Management Endpoint
+#     - Use the Application IDs in the parameters file
+
+# cd 'D:\EdWire\Git\EG.Deploy\EdGraph.Deploy\Marketplace\EdGraph Full Deployment'
+
 #---------------------------
 # Input Parameters
 #---------------------------
 
 Param (
     [String] $AzureTenantId,
-    [String] $AzureSubscriptionName = "Pay-As-You-Go",
-    [String] $ResourceGroupName = "ws-edgraph-prod-eastus",
+    [String] $AzureSubscriptionName = "Development",
+    [String] $ResourceGroupName = "eg-edgraph-dev-eastus",
     [String] $ResourceGroupLocation = "EastUS",
-    [String] $ParameterFileUri = "$PSScriptRoot\mainTemplate.parameters.writescore.prod.eastus.json",
+    [String] $ParameterFileUri = "$PSScriptRoot\mainTemplate.parameters.edwire.dev.eastus.json",
     [Switch] $ValidateOnly = $false
 )
 
@@ -61,7 +78,7 @@ $deploymentTestResult = Test-AzResourceGroupDeployment  -ResourceGroupName $Reso
                                                         -TemplateParameterFile "$ParameterFileUri" `
                                                         -Debug
 
-If ([string]::IsNullOrEmpty($deploymentTestResult) -and $ValidateOnly -eq $false)
+if ([string]::IsNullOrEmpty($deploymentTestResult) -and $ValidateOnly -eq $false)
 {
     Write-Output "Test-AzResourceGroupDeployment - Template is Valid"
 
