@@ -1,0 +1,198 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "repoBaseUrl":{
+      "type": "string",
+      "metadata": {
+        "description": "Base URL of the repository"
+      }
+    },
+    "apimServiceName": {
+      "type": "string",
+      "metadata": {
+        "description" : "The name of the API Management"
+      }
+    },
+    "publisherEmail": {
+      "type": "string",
+      "minLength": 1,
+      "defaultValue": "info@edgraph.com",
+      "metadata": {
+        "description": "The email address of the owner of the service"
+      }
+    },
+    "publisherName": {
+      "type": "string",
+      "minLength": 1,
+      "defaultValue": "EdWire, Inc",
+      "metadata": {
+        "description": "The name of the owner of the service"
+      }
+    },
+    "sku": {
+      "type": "string",
+      "allowedValues": ["Developer", "Standard", "Premium"],
+      "defaultValue": "Developer",
+      "metadata": {
+        "description": "The pricing tier of this API Management service"
+      }
+    },
+    "skuCount": {
+      "type": "int",
+      "defaultValue": 1,
+      "metadata": {
+        "description": "The instance size of this API Management service."
+      }
+    }
+  },
+  "variables": {},
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "serviceTemplate",
+      "apiVersion": "2017-05-10",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('repoBaseUrl'), '/service.template.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "apimServiceName": {
+            "value": "[parameters('apimServiceName')]"
+          },
+          "publisherName": {
+            "value": "[parameters('publisherName')]"
+          },
+          "publisherEmail": {
+            "value": "[parameters('publisherEmail')]"
+          },
+          "sku": {
+            "value": "[parameters('sku')]"
+          },
+          "skuCount": {
+            "value": "[parameters('skuCount')]"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "productStarterTemplate",
+      "apiVersion": "2017-05-10",
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'serviceTemplate')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('repoBaseUrl'), '/products/product-starter.template.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "apimServiceName": { "value": "[parameters('apimServiceName')]" }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "productUnlimitedTemplate",
+      "apiVersion": "2017-05-10",
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'serviceTemplate')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('repoBaseUrl'), '/products/product-unlimited.template.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "apimServiceName": { "value": "[parameters('apimServiceName')]" }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "subscriptionsTemplate",
+      "apiVersion": "2017-05-10",
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'productStarterTemplate')]",
+        "[resourceId('Microsoft.Resources/deployments', 'productUnlimitedTemplate')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('repoBaseUrl'), '/subscriptions.template.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "apimServiceName": { "value": "[parameters('apimServiceName')]" }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "edfiVersionSetTemplate",
+      "apiVersion": "2017-05-10",
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'serviceTemplate')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('repoBaseUrl'), 'apis/edfi/edfi.version-set.template.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "apimServiceName": { "value": "[parameters('apimServiceName')]" }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "edfiV26Template",
+      "apiVersion": "2017-05-10",
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'productStarterTemplate')]",
+        "[resourceId('Microsoft.Resources/deployments', 'productUnlimitedTemplate')]",
+        "[resourceId('Microsoft.Resources/deployments', 'edfiVersionSetTemplate')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('repoBaseUrl'), 'apis/edfi/v2.6/edfi.v2.6.template.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "apimServiceName": { "value": "[parameters('apimServiceName')]" },
+          "repoBaseUrl": { "value": "[parameters('repoBaseUrl')]" }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "edfiV32Template",
+      "apiVersion": "2017-05-10",
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'productStarterTemplate')]",
+        "[resourceId('Microsoft.Resources/deployments', 'productUnlimitedTemplate')]",
+        "[resourceId('Microsoft.Resources/deployments', 'edfiVersionSetTemplate')]",
+        "[resourceId('Microsoft.Resources/deployments', 'edfiV26Template')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('repoBaseUrl'), 'apis/edfi/v3.2/edfi.v3.2.template.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "apimServiceName": { "value": "[parameters('apimServiceName')]" },
+          "repoBaseUrl": { "value": "[parameters('repoBaseUrl')]" }
+        }
+      }
+    }
+  ],
+  "outputs": {}
+}

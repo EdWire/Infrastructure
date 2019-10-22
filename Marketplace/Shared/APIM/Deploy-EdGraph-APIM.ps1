@@ -30,7 +30,8 @@ Param (
     [String] $AzureSubscriptionName,
     [String] $ResourceGroupName,
     [String] $ResourceGroupLocation,
-    [String] $ParameterFileUri,
+    [String] $RepositoryBaseUrl = 'https://raw.githubusercontent.com/EdWire/Infrastructure/tree/master/Marketplace/Shared/APIM/',
+    [String] $ParameterFileUri = 'master.parameters.json',
     [Switch] $ValidateOnly = $true
 )
 
@@ -80,8 +81,9 @@ if ((Get-AzResourceGroup -Name $ResourceGroupName -Location $ResourceGroupLocati
 Write-Output "New-AzResourceGroupDeployment - Start"
 
 $deploymentTestResult = Test-AzResourceGroupDeployment  -ResourceGroupName $ResourceGroupName `
-                                                        -TemplateFile "$PSScriptRoot\mainTemplate.json" `
-                                                        -TemplateParameterFile "$ParameterFileUri" `
+                                                        -TemplateUri "$RepositoryBaseUrl\master.Template.json" `
+                                                        -TemplateParameterUri "$RepositoryBaseUrl$ParameterFileUri" `
+                                                        -repoBaseUrl $RepositoryBaseUrl
                                                         -Debug
 
 if ([string]::IsNullOrEmpty($deploymentTestResult) -and $ValidateOnly -eq $false)
@@ -91,8 +93,8 @@ if ([string]::IsNullOrEmpty($deploymentTestResult) -and $ValidateOnly -eq $false
     Write-Output "New-AzResourceGroupDeployment - Starting deployment in $ResourceGroupName"
 
     New-AzResourceGroupDeployment   -ResourceGroupName $ResourceGroupName `
-                                    -TemplateFile "$PSScriptRoot\mainTemplate.json" `
-                                    -TemplateParameterFile "$ParameterFileUri"
+                                    -TemplateUri "$RepositoryBaseUrl\master.Template.json" `
+                                    -TemplateParameterUri "$RepositoryBaseUrl$ParameterFileUri" `
 }
 else
 {

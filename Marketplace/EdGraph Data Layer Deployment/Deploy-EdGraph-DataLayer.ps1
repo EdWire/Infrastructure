@@ -25,7 +25,7 @@ Param (
     [String] $ResourceGroupName,
     [String] $ResourceGroupLocation,
     [String] $ParameterFileUri,
-    [Switch] $ValidateOnly = $false
+    [Switch] $ValidateOnly = $true
 )
 
 # Stop the script on first error

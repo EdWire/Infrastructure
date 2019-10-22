@@ -1,0 +1,26 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "apimServiceName": {
+      "type": "string"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ApiManagement/service/subscriptions",
+      "name": "[concat(parameters('apimServiceName'), '/53c765632095310385070001')]",
+      "apiVersion": "2019-01-01",
+      "scale": null,
+      "properties": {
+        "userId": "[resourceId('Microsoft.ApiManagement/service/users', parameters('apimServiceName'), '1')]",
+        "productId": "[resourceId('Microsoft.ApiManagement/service/products', parameters('apimServiceName'), 'starter')]",
+        "displayName": "Starter product subscription",
+        "primaryKey": "07eeae70569b4af3af9b6cea759e7928",
+        "secondaryKey": "0168da4eff0946ecba2d4b7d2e82e7f1",
+        "allowTracing": true,
+        "state": "active"
+      }
+    }
+  ]
+}
