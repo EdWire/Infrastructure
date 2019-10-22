@@ -13,13 +13,10 @@
 #   - Create Azure AD Application for access to the SF Cluster Management Endpoint
 #     - Use the Application IDs in the parameters file
 
-# cd 'D:\EdWire\Git\EG.Deploy\EdGraph.Deploy\Marketplace\EdGraph Full Deployment'
-
-# Alachua Prod 
-# .\Deploy-EdGraph-DataLayer.ps1 -AzureSubscriptionName "ACPS (Production)" -ResourceGroupName "edgraph-prod-eastus" -ResourceGroupLocation "EastUS" -ParameterFileUri "\dataLayerTemplate.parameters.acps.prod.eastus.json"
+# cd D:\GitHub\EdWire\Infrastructure\Marketplace\Shared\APIM
 
 # EdWire Prod
-# .\Deploy-EdGraph-DataLayer.ps1 -AzureSubscriptionName "Development" -ResourceGroupName "eg-edgraph-dev-eastus" -ResourceGroupLocation "EastUS" -ParameterFileUri "\dataLayerTemplate.parameters.edwire.dev.eastus.json"
+# .\Deploy-EdGraph-APIM.ps1 -AzureSubscriptionName "Development" -ResourceGroupName "eg-edgraph-dev-eastus" -ResourceGroupLocation "EastUS" -ParameterFileUri "master.parameters.json"
 
 #---------------------------
 # Input Parameters
@@ -30,8 +27,8 @@ Param (
     [String] $AzureSubscriptionName,
     [String] $ResourceGroupName,
     [String] $ResourceGroupLocation,
-    [String] $RepositoryBaseUrl = 'https://raw.githubusercontent.com/EdWire/Infrastructure/tree/master/Marketplace/Shared/APIM/',
-    [String] $ParameterFileUri = 'master.parameters.json',
+    [String] $RepositoryBaseUrl = 'https://raw.githubusercontent.com/EdWire/Infrastructure/Development_LinkedTemplates/Marketplace/Shared/APIM',
+    [String] $ParameterFileUri,
     [Switch] $ValidateOnly = $true
 )
 
@@ -78,13 +75,11 @@ if ((Get-AzResourceGroup -Name $ResourceGroupName -Location $ResourceGroupLocati
 #---------------------------
 # Deploy Template
 #---------------------------
-Write-Output "New-AzResourceGroupDeployment - Start"
+Write-Output "Test-AzResourceGroupDeployment - Start"
 
 $deploymentTestResult = Test-AzResourceGroupDeployment  -ResourceGroupName $ResourceGroupName `
-                                                        -TemplateUri "$RepositoryBaseUrl\master.Template.json" `
-                                                        -TemplateParameterUri "$RepositoryBaseUrl$ParameterFileUri" `
-                                                        -repoBaseUrl $RepositoryBaseUrl
-                                                        -Debug
+                                                        -TemplateUri "$RepositoryBaseUrl/master.template.json" `
+                                                        -TemplateParameterUri "$RepositoryBaseUrl/$ParameterFileUri"
 
 if ([string]::IsNullOrEmpty($deploymentTestResult) -and $ValidateOnly -eq $false)
 {
@@ -93,8 +88,8 @@ if ([string]::IsNullOrEmpty($deploymentTestResult) -and $ValidateOnly -eq $false
     Write-Output "New-AzResourceGroupDeployment - Starting deployment in $ResourceGroupName"
 
     New-AzResourceGroupDeployment   -ResourceGroupName $ResourceGroupName `
-                                    -TemplateUri "$RepositoryBaseUrl\master.Template.json" `
-                                    -TemplateParameterUri "$RepositoryBaseUrl$ParameterFileUri" `
+                                    -TemplateUri "$RepositoryBaseUrl/master.template.json" `
+                                    -TemplateParameterUri "$RepositoryBaseUrl/$ParameterFileUri"
 }
 else
 {

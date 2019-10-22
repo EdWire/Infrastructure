@@ -2,7 +2,7 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "repoBaseUrl":{
+    "repoBaseUrl": {
       "type": "string",
       "metadata": {
         "description": "Base URL of the repository"
@@ -142,7 +142,7 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(parameters('repoBaseUrl'), 'apis/edfi/edfi.version-set.template.json')]",
+          "uri": "[concat(parameters('repoBaseUrl'), '/apis/edfi/edfi.version-set.template.json')]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
@@ -162,7 +162,7 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(parameters('repoBaseUrl'), 'apis/edfi/v2.6/edfi.v2.6.template.json')]",
+          "uri": "[concat(parameters('repoBaseUrl'), '/apis/edfi/v2.6/edfi.v2.6.template.json')]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
@@ -184,7 +184,7 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(parameters('repoBaseUrl'), 'apis/edfi/v3.2/edfi.v3.2.template.json')]",
+          "uri": "[concat(parameters('repoBaseUrl'), '/apis/edfi/v3.2/edfi.v3.2.template.json')]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {

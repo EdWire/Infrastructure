@@ -79,7 +79,7 @@
         "[resourceId('Microsoft.ApiManagement/service/apis', parameters('apimServiceName'), 'EdFi-v32')]"
       ],
       "properties": {
-        "policyContent": "[concat(parameters('repoBaseUrl'), 'apis/edfi/v3.2/edfi.v3.2.policy.xml')]",
+        "policyContent": "[concat(parameters('repoBaseUrl'), '/apis/edfi/v3.2/edfi.v3.2.policy.xml')]",
         "contentFormat": "rawxml-link"
       }
     }
