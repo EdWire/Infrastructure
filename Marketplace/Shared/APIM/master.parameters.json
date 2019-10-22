@@ -6,7 +6,7 @@
       "value": "https://raw.githubusercontent.com/EdWire/Infrastructure/Development_LinkedTemplates/Marketplace/Shared/APIM"
     },
     "apimServiceName": {
-      "value": "contosoapim-dev"
+      "value": "eg-apim-test-dev-eastus"
     }
   }
 }

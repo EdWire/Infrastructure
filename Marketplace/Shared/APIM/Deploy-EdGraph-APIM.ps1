@@ -77,11 +77,13 @@ if ((Get-AzResourceGroup -Name $ResourceGroupName -Location $ResourceGroupLocati
 #---------------------------
 Write-Output "Test-AzResourceGroupDeployment - Start"
 
+
 $deploymentTestResult = Test-AzResourceGroupDeployment  -ResourceGroupName $ResourceGroupName `
                                                         -TemplateUri "$RepositoryBaseUrl/master.template.json" `
-                                                        -TemplateParameterUri "$RepositoryBaseUrl/$ParameterFileUri"
+                                                        -TemplateParameterUri "$RepositoryBaseUrl/$ParameterFileUri" `
+                                                        -Debug
 
-if ([string]::IsNullOrEmpty($deploymentTestResult) -and $ValidateOnly -eq $false)
+if ([string]::IsNullOrEmpty($deploymentTestResult))
 {
     Write-Output "Test-AzResourceGroupDeployment - Template is Valid"
 
