@@ -83,51 +83,51 @@
     }
   },
   "resources": [
-    {
-      "type": "Microsoft.ApiManagement/service",
-      "name": "[parameters('apimServiceName')]",
-      "apiVersion": "2019-01-01",
-      "location": "[resourceGroup().location]",
-      "identity": {
-        "type": "SystemAssigned"
-      },
-      "sku": {
-        "name": "[parameters('sku')]",
-        "capacity": "[parameters('skuCount')]"
-      },
-      "properties": {
-        "publisherEmail": "[parameters('publisherEmail')]",
-        "publisherName": "[parameters('publisherName')]",
-        "runtimeUrl": "[concat('https://', parameters('apimServiceName'),'.azure-api.net')]",
-        "portalUrl": "[concat('https://', parameters('apimServiceName'),'.portal.azure-api.net')]",
-        "managementApiUrl": "[concat('https://', parameters('apimServiceName'),'.management.azure-api.net')]",
-        "scmUrl": "[concat('https://', parameters('apimServiceName'),'.scm.azure-api.net')]",
-        "virtualNetworkType": "[parameters('virtualNetworkType')]",
-        "virtualNetworkConfiguration": {
-          "subnetResourceId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworkName'), parameters('apimSubnetName'))]"
-        },
-        "hostnameConfigurations": [
-          {
-            "type": "Proxy",
-            "hostName": "[parameters('apimProxyHostName')]",
-            "keyVaultId": "[parameters('apimSslCertificateSecretKeyVaultUrl')]"
-          },
-          {
-            "type": "Portal",
-            "hostName": "[parameters('apimPortalHostName')]",
-            "keyVaultId": "[parameters('apimSslCertificateSecretKeyVaultUrl')]"
-          },
-          {
-            "type": "Management",
-            "hostName": "[parameters('apimManagementHostName')]",
-            "keyVaultId": "[parameters('apimSslCertificateSecretKeyVaultUrl')]"
-          }
-        ]
-      },
-      "tags": {
-        "Scope": "EdGraph",
-        "Type": "API Management"
-      }
-    }
+    //{
+    //  "type": "Microsoft.ApiManagement/service",
+    //  "name": "[parameters('apimServiceName')]",
+    //  "apiVersion": "2019-01-01",
+    //  "location": "[resourceGroup().location]",
+    //  "identity": {
+    //    "type": "SystemAssigned"
+    //  },
+    //  "sku": {
+    //    "name": "[parameters('sku')]",
+    //    "capacity": "[parameters('skuCount')]"
+    //  },
+    //  "properties": {
+    //    "publisherEmail": "[parameters('publisherEmail')]",
+    //    "publisherName": "[parameters('publisherName')]",
+    //    "runtimeUrl": "[concat('https://', parameters('apimServiceName'),'.azure-api.net')]",
+    //    "portalUrl": "[concat('https://', parameters('apimServiceName'),'.portal.azure-api.net')]",
+    //    "managementApiUrl": "[concat('https://', parameters('apimServiceName'),'.management.azure-api.net')]",
+    //    "scmUrl": "[concat('https://', parameters('apimServiceName'),'.scm.azure-api.net')]",
+    //    "virtualNetworkType": "[parameters('virtualNetworkType')]",
+    //    "virtualNetworkConfiguration": {
+    //      "subnetResourceId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworkName'), parameters('apimSubnetName'))]"
+    //    },
+    //    "hostnameConfigurations": [
+    //      {
+    //        "type": "Proxy",
+    //        "hostName": "[parameters('apimProxyHostName')]",
+    //        "keyVaultId": "[parameters('apimSslCertificateSecretKeyVaultUrl')]"
+    //      },
+    //      {
+    //        "type": "Portal",
+    //        "hostName": "[parameters('apimPortalHostName')]",
+    //        "keyVaultId": "[parameters('apimSslCertificateSecretKeyVaultUrl')]"
+    //      },
+    //      {
+    //        "type": "Management",
+    //        "hostName": "[parameters('apimManagementHostName')]",
+    //        "keyVaultId": "[parameters('apimSslCertificateSecretKeyVaultUrl')]"
+    //      }
+    //    ]
+    //  },
+    //  "tags": {
+    //    "Scope": "EdGraph",
+    //    "Type": "API Management"
+    //  }
+    //}
   ]
 }
