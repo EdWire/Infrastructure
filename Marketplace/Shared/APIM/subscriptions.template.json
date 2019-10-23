@@ -13,8 +13,8 @@
       "apiVersion": "2019-01-01",
       "scale": null,
       "properties": {
-        "userId": "[resourceId('Microsoft.ApiManagement/service/users', parameters('apimServiceName'), '1')]",
-        "productId": "[resourceId('Microsoft.ApiManagement/service/products', parameters('apimServiceName'), 'starter')]",
+        "ownerId": "[resourceId('Microsoft.ApiManagement/service/users', parameters('apimServiceName'), '1')]",
+        "scope": "[resourceId('Microsoft.ApiManagement/service/products', parameters('apimServiceName'), 'unlimited')]",
         "displayName": "Starter product subscription",
         "primaryKey": "07eeae70569b4af3af9b6cea759e7928",
         "secondaryKey": "0168da4eff0946ecba2d4b7d2e82e7f1",

@@ -91,7 +91,8 @@ if ([string]::IsNullOrEmpty($deploymentTestResult))
 
     New-AzResourceGroupDeployment   -ResourceGroupName $ResourceGroupName `
                                     -TemplateUri "$RepositoryBaseUrl/master.template.json" `
-                                    -TemplateParameterUri "$RepositoryBaseUrl/$ParameterFileUri"
+                                    -TemplateParameterUri "$RepositoryBaseUrl/$ParameterFileUri" `
+                                    -Debug
 }
 else
 {
