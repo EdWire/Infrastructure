@@ -156,6 +156,9 @@
           },
           "apimSubnetName": {
             "value": "[parameters('apimSubnetName')]"
+          },
+          "apimSslKeyVaultName": {
+            "value": "[parameters('apimSslKeyVaultName')]"
           }
         }
       }
@@ -197,9 +200,6 @@
           },
           "apimSubnetName": {
             "value": "[parameters('apimSubnetName')]"
-          },
-          "apimSslKeyVaultName": {
-            "value": "[parameters('apimSslKeyVaultName')]"
           },
           "apimSslCertificateSecretKeyVaultUrl": {
             "value": "[parameters('apimSslCertificateSecretKeyVaultUrl')]"

@@ -56,6 +56,12 @@
       "metadata": {
         "description": "The name of a subnet in a virtual network to deploy the API Management service in."
       }
+    },
+    "apimSslKeyVaultName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name to the key vault that contains the SSL certificate to be used by the host names' custom domain."
+      }
     }
   },
   "resources": [
@@ -86,6 +92,27 @@
       "tags": {
         "Scope": "EdGraph",
         "Type": "API Management"
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/accessPolicies",
+      "name": "[concat(parameters('apimSslKeyVaultName'), '/add')]",
+      "apiVersion": "2018-02-14",
+      "dependsOn": [
+        "[resourceId('Microsoft.ApiManagement/service', parameters('apimServiceName'))]"
+      ],
+      "properties": {
+        "accessPolicies": [
+          {
+            "objectId": "[reference(concat(resourceId('Microsoft.ApiManagement/service', parameters('apimServiceName')), '/providers/Microsoft.ManagedIdentity/Identities/default'), '2018-11-30').principalId]",
+            "tenantId": "[subscription().TenantId]",
+            "permissions": {
+              "secrets": [
+                "get"
+              ]
+            }
+          }
+        ]
       }
     }
   ]
