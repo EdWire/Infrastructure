@@ -1,0 +1,92 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "apimServiceName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the API Management"
+      }
+    },
+    "publisherEmail": {
+      "type": "string",
+      "minLength": 1,
+      "metadata": {
+        "description": "The email address of the owner of the service"
+      }
+    },
+    "publisherName": {
+      "type": "string",
+      "minLength": 1,
+      "metadata": {
+        "description": "The name of the owner of the service"
+      }
+    },
+    "sku": {
+      "type": "string",
+      "allowedValues": [ "Developer", "Standard", "Premium" ],
+      "defaultValue": "Developer",
+      "metadata": {
+        "description": "The pricing tier of this API Management service"
+      }
+    },
+    "skuCount": {
+      "type": "int",
+      "defaultValue": 1,
+      "metadata": {
+        "description": "The instance size of this API Management service."
+      }
+    },
+    "virtualNetworkType": {
+      "type": "string",
+      "allowedValues": [ "Internal", "External" ],
+      "defaultValue": "Internal",
+      "metadata": {
+        "description": "The type of VPN in which API Management service needs to be configured in."
+      }
+    },
+    "virtualNetworkName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the virtual network to deploy the API Management service in."
+      }
+    },
+    "apimSubnetName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of a subnet in a virtual network to deploy the API Management service in."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ApiManagement/service",
+      "name": "[parameters('apimServiceName')]",
+      "apiVersion": "2019-01-01",
+      "location": "[resourceGroup().location]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "sku": {
+        "name": "[parameters('sku')]",
+        "capacity": "[parameters('skuCount')]"
+      },
+      "properties": {
+        "publisherEmail": "[parameters('publisherEmail')]",
+        "publisherName": "[parameters('publisherName')]",
+        "runtimeUrl": "[concat('https://', parameters('apimServiceName'),'.azure-api.net')]",
+        "portalUrl": "[concat('https://', parameters('apimServiceName'),'.portal.azure-api.net')]",
+        "managementApiUrl": "[concat('https://', parameters('apimServiceName'),'.management.azure-api.net')]",
+        "scmUrl": "[concat('https://', parameters('apimServiceName'),'.scm.azure-api.net')]",
+        "virtualNetworkType": "[parameters('virtualNetworkType')]",
+        "virtualNetworkConfiguration": {
+          "subnetResourceId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworkName'), parameters('apimSubnetName'))]"
+        }
+      },
+      "tags": {
+        "Scope": "EdGraph",
+        "Type": "API Management"
+      }
+    }
+  ]
+}

@@ -1,0 +1,326 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "repoBaseUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "Base URL of the repository"
+      }
+    },
+    "apimServiceName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the API Management"
+      }
+    },
+    "publisherEmail": {
+      "type": "string",
+      "minLength": 1,
+      "defaultValue": "info@edgraph.com",
+      "metadata": {
+        "description": "The email address of the owner of the service"
+      }
+    },
+    "publisherName": {
+      "type": "string",
+      "minLength": 1,
+      "defaultValue": "EdWire, Inc",
+      "metadata": {
+        "description": "The name of the owner of the service"
+      }
+    },
+    "sku": {
+      "type": "string",
+      "allowedValues": [ "Developer", "Standard", "Premium" ],
+      "defaultValue": "Developer",
+      "metadata": {
+        "description": "The pricing tier of this API Management service"
+      }
+    },
+    "skuCount": {
+      "type": "int",
+      "defaultValue": 1,
+      "metadata": {
+        "description": "The instance size of this API Management service."
+      }
+    },
+    "virtualNetworkType": {
+      "type": "string",
+      "allowedValues": [ "Internal", "External" ],
+      "defaultValue": "Internal",
+      "metadata": {
+        "description": "The type of VPN in which API Management service needs to be configured in."
+      }
+    },
+    "virtualNetworkName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the virtual network to deploy the API Management service in."
+      }
+    },
+    "apimSubnetName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of a subnet in a virtual network to deploy the API Management service in."
+      }
+    },
+    "sfManagementEndpoint": {
+      "type": "string",
+      "metadata": {
+        "description": "The service fabric cluster management endpoint"
+      }
+    },
+    "sfClientCertificateThumprint": {
+      "type": "string",
+      "metadata": {
+        "description": "The service fabric cluster client certificate thumbprint"
+      }
+    },
+    "sfServerCertificateThumprint": {
+      "type": "string",
+      "metadata": {
+        "description": "The service fabric cluster server certificate thumbprint"
+      }
+    },
+    "sfCertificateBase64": {
+      "type": "string",
+      "metadata": {
+        "description": "The service fabric cluster server certificate base 64"
+      }
+    }
+  },
+  "variables": {},
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "apimServiceInitialTemplate",
+      "apiVersion": "2017-05-10",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('repoBaseUrl'), '/service/service-initial.template.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "apimServiceName": {
+            "value": "[parameters('apimServiceName')]"
+          },
+          "publisherName": {
+            "value": "[parameters('publisherName')]"
+          },
+          "publisherEmail": {
+            "value": "[parameters('publisherEmail')]"
+          },
+          "sku": {
+            "value": "[parameters('sku')]"
+          },
+          "skuCount": {
+            "value": "[parameters('skuCount')]"
+          },
+          "virtualNetworkType": {
+            "value": "[parameters('virtualNetworkType')]"
+          },
+          "virtualNetworkName": {
+            "value": "[parameters('virtualNetworkName')]"
+          },
+          "apimSubnetName": {
+            "value": "[parameters('apimSubnetName')]"
+          }
+        }
+      }
+    },
+    //{
+    //  "type": "Microsoft.Resources/deployments",
+    //  "name": "apimServiceSubsequentTemplate",
+    //  "apiVersion": "2017-05-10",
+    //  "dependsOn": [
+    //    "[resourceId('Microsoft.Resources/deployments', 'serviceTemplate')]"
+    //  ],
+    //  "properties": {
+    //    "mode": "Incremental",
+    //    "templateLink": {
+    //      "uri": "[concat(parameters('repoBaseUrl'), '/service/service-subsequent.template.json')]",
+    //      "contentVersion": "1.0.0.0"
+    //    },
+    //    "parameters": {
+    //      "apimServiceName": {
+    //        "value": "[parameters('apimServiceName')]"
+    //      },
+    //      "publisherName": {
+    //        "value": "[parameters('publisherName')]"
+    //      },
+    //      "publisherEmail": {
+    //        "value": "[parameters('publisherEmail')]"
+    //      },
+    //      "sku": {
+    //        "value": "[parameters('sku')]"
+    //      },
+    //      "skuCount": {
+    //        "value": "[parameters('skuCount')]"
+    //      },
+    //      "virtualNetworkType": {
+    //        "value": "[parameters('virtualNetworkType')]"
+    //      },
+    //      "virtualNetworkName": {
+    //        "value": "[parameters('virtualNetworkName')]"
+    //      },
+    //      "apimSubnetName": {
+    //        "value": "[parameters('apimSubnetName')]"
+    //      }
+    //    }
+    //  }
+    //},
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "serviceFabricCertificateTemplate",
+      "apiVersion": "2017-05-10",
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'serviceTemplate')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('repoBaseUrl'), '/certificates/cert-servicefabric.template.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "apimServiceName": { "value": "[parameters('apimServiceName')]" },
+          "sfCertificateBase64": { "value": "[parameters('sfCertificateBase64')]" }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "serviceFabricBackendTemplate",
+      "apiVersion": "2017-05-10",
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'serviceTemplate')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('repoBaseUrl'), '/backends/backend-servicefabric.template.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "apimServiceName": { "value": "[parameters('apimServiceName')]" },
+          "sfManagementEndpoint": { "value": "[parameters('sfManagementEndpoint')]" },
+          "sfClientCertificateThumprint": { "value": "[parameters('sfClientCertificateThumprint')]" },
+          "sfServerCertificateThumprint": { "value": "[parameters('sfServerCertificateThumprint')]" }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "productStarterTemplate",
+      "apiVersion": "2017-05-10",
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'serviceTemplate')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('repoBaseUrl'), '/products/product-starter.template.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "apimServiceName": { "value": "[parameters('apimServiceName')]" }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "productUnlimitedTemplate",
+      "apiVersion": "2017-05-10",
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'serviceTemplate')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('repoBaseUrl'), '/products/product-unlimited.template.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "apimServiceName": { "value": "[parameters('apimServiceName')]" }
+        }
+      }
+    }
+    //{
+    //  "type": "Microsoft.Resources/deployments",
+    //  "name": "subscriptionsTemplate",
+    //  "apiVersion": "2017-05-10",
+    //  "dependsOn": [
+    //    "[resourceId('Microsoft.Resources/deployments', 'productStarterTemplate')]",
+    //    "[resourceId('Microsoft.Resources/deployments', 'productUnlimitedTemplate')]"
+    //  ],
+    //  "properties": {
+    //    "mode": "Incremental",
+    //    "templateLink": {
+    //      "uri": "[concat(parameters('repoBaseUrl'), '/subscriptions/subscriptions.template.json')]",
+    //      "contentVersion": "1.0.0.0"
+    //    },
+    //    "parameters": {
+    //      "apimServiceName": { "value": "[parameters('apimServiceName')]" }
+    //    }
+    //  }
+    //},
+    //{
+    //  "type": "Microsoft.Resources/deployments",
+    //  "name": "edfiVersionSetTemplate",
+    //  "apiVersion": "2017-05-10",
+    //  "dependsOn": [
+    //    "[resourceId('Microsoft.Resources/deployments', 'serviceTemplate')]"
+    //  ],
+    //  "properties": {
+    //    "mode": "Incremental",
+    //    "templateLink": {
+    //      "uri": "[concat(parameters('repoBaseUrl'), '/apis/edfi/eg-apim-test-dev-eastus-apiVersionSets.template.json')]",
+    //      "contentVersion": "1.0.0.0"
+    //    },
+    //    "parameters": {
+    //      "apimServiceName": { "value": "[parameters('apimServiceName')]" }
+    //    }
+    //  }
+    //},
+    //{
+    //  "type": "Microsoft.Resources/deployments",
+    //  "name": "edfiv32InitialApiTemplate",
+    //  "apiVersion": "2017-05-10",
+    //  "dependsOn": [
+    //    "[resourceId('Microsoft.Resources/deployments', 'edfiVersionSetTemplate')]"
+    //  ],
+    //  "properties": {
+    //    "mode": "Incremental",
+    //    "templateLink": {
+    //      "uri": "[concat(parameters('repoBaseUrl'), '/apis/edfi/eg-apim-test-dev-eastus-edfi-v3-2-initial.api.template.json')]",
+    //      "contentVersion": "1.0.0.0"
+    //    },
+    //    "parameters": {
+    //      "apimServiceName": { "value": "[parameters('apimServiceName')]" }
+    //    }
+    //  }
+    //},
+    //{
+    //  "type": "Microsoft.Resources/deployments",
+    //  "name": "edfiv32SubsequentApiTemplate",
+    //  "apiVersion": "2017-05-10",
+    //  "dependsOn": [
+    //    "[resourceId('Microsoft.Resources/deployments', 'edfiv32InitialApiTemplate')]"
+    //  ],
+    //  "properties": {
+    //    "mode": "Incremental",
+    //    "templateLink": {
+    //      "uri": "[concat(parameters('repoBaseUrl'), '/apis/edfi/eg-apim-test-dev-eastus-edfi-v3-2-subsequent.api.template.json')]",
+    //      "contentVersion": "1.0.0.0"
+    //    },
+    //    "parameters": {
+    //      "apimServiceName": { "value": "[parameters('apimServiceName')]" }
+    //    }
+    //  }
+    //}
+  ],
+  "outputs": {
+  }
+}

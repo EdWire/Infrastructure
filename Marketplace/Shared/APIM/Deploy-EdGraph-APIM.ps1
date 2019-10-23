@@ -16,7 +16,7 @@
 # cd D:\GitHub\EdWire\Infrastructure\Marketplace\Shared\APIM
 
 # EdWire Prod
-# .\Deploy-EdGraph-APIM.ps1 -AzureSubscriptionName "Development" -ResourceGroupName "eg-edgraph-dev-eastus" -ResourceGroupLocation "EastUS" -ParameterFileUri "master.parameters.json"
+# .\Deploy-EdGraph-APIM.ps1 -AzureSubscriptionName "Development" -ResourceGroupName "eg-edgraph-dev-eastus" -ResourceGroupLocation "EastUS" -ParameterFileUri "apim.parameters.json"
 
 #---------------------------
 # Input Parameters
@@ -79,7 +79,7 @@ Write-Output "Test-AzResourceGroupDeployment - Start"
 
 
 $deploymentTestResult = Test-AzResourceGroupDeployment  -ResourceGroupName $ResourceGroupName `
-                                                        -TemplateUri "$RepositoryBaseUrl/master.template.json" `
+                                                        -TemplateUri "$RepositoryBaseUrl/apim.template.json" `
                                                         -TemplateParameterUri "$RepositoryBaseUrl/$ParameterFileUri" `
                                                         -Debug
 
@@ -90,7 +90,7 @@ if ([string]::IsNullOrEmpty($deploymentTestResult))
     Write-Output "New-AzResourceGroupDeployment - Starting deployment in $ResourceGroupName"
 
     New-AzResourceGroupDeployment   -ResourceGroupName $ResourceGroupName `
-                                    -TemplateUri "$RepositoryBaseUrl/master.template.json" `
+                                    -TemplateUri "$RepositoryBaseUrl/apim.template.json" `
                                     -TemplateParameterUri "$RepositoryBaseUrl/$ParameterFileUri" `
                                     -Debug
 }

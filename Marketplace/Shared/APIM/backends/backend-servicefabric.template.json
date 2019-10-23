@@ -1,0 +1,57 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "apimServiceName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the API Management"
+      }
+    },
+    "sfManagementEndpoint": {
+      "type": "string",
+      "metadata": {
+        "description": "The service fabric cluster management endpoint"
+      }
+    },
+    "sfClientCertificateThumprint": {
+      "type": "string",
+      "metadata": {
+        "description": "The service fabric cluster client certificate thumbprint"
+      }
+    },
+    "sfServerCertificateThumprint": {
+      "type": "string",
+      "metadata": {
+        "description": "The service fabric cluster server certificate thumbprint"
+      }
+    }
+  },
+  "variables": {},
+  "resources": [
+    {
+      "apiVersion": "2019-01-01",
+      "type": "Microsoft.ApiManagement/service/backends",
+      "name": "[concat(parameters('apimServiceName'), '/servicefabric')]",
+      "properties": {
+        "description": "Service Fabric Backend",
+        "url": "fabric:/fake/service",
+        "protocol": "http",
+        "resourceId": "[parameters('sfManagementEndpoint')]",
+        "properties": {
+          "serviceFabricCluster": {
+            "managementEndpoints": [
+              "[parameters('sfManagementEndpoint')]"
+            ],
+            "clientCertificateThumbprint": "[parameters('sfClientCertificateThumprint')]",
+            "serverCertificateThumbprints": [
+              "[parameters('sfServerCertificateThumprint')]"
+            ],
+            "maxPartitionResolutionRetries": 5
+          }
+        }
+      }
+    }    
+  ],
+  "outputs": {}
+}
