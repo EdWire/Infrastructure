@@ -135,7 +135,7 @@
     //  "name": "apimServiceSubsequentTemplate",
     //  "apiVersion": "2017-05-10",
     //  "dependsOn": [
-    //    "[resourceId('Microsoft.Resources/deployments', 'serviceTemplate')]"
+    //    "[resourceId('Microsoft.Resources/deployments', 'apimServiceInitialTemplate')]"
     //  ],
     //  "properties": {
     //    "mode": "Incremental",
@@ -176,7 +176,7 @@
       "name": "serviceFabricCertificateTemplate",
       "apiVersion": "2017-05-10",
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'serviceTemplate')]"
+        "[resourceId('Microsoft.Resources/deployments', 'apimServiceInitialTemplate')]"
       ],
       "properties": {
         "mode": "Incremental",
@@ -195,7 +195,7 @@
       "name": "serviceFabricBackendTemplate",
       "apiVersion": "2017-05-10",
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'serviceTemplate')]"
+        "[resourceId('Microsoft.Resources/deployments', 'apimServiceInitialTemplate')]"
       ],
       "properties": {
         "mode": "Incremental",
@@ -216,7 +216,7 @@
       "name": "productStarterTemplate",
       "apiVersion": "2017-05-10",
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'serviceTemplate')]"
+        "[resourceId('Microsoft.Resources/deployments', 'apimServiceInitialTemplate')]"
       ],
       "properties": {
         "mode": "Incremental",
@@ -234,7 +234,7 @@
       "name": "productUnlimitedTemplate",
       "apiVersion": "2017-05-10",
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'serviceTemplate')]"
+        "[resourceId('Microsoft.Resources/deployments', 'apimServiceInitialTemplate')]"
       ],
       "properties": {
         "mode": "Incremental",
@@ -271,7 +271,7 @@
     //  "name": "edfiVersionSetTemplate",
     //  "apiVersion": "2017-05-10",
     //  "dependsOn": [
-    //    "[resourceId('Microsoft.Resources/deployments', 'serviceTemplate')]"
+    //    "[resourceId('Microsoft.Resources/deployments', 'apimServiceInitialTemplate')]"
     //  ],
     //  "properties": {
     //    "mode": "Incremental",
