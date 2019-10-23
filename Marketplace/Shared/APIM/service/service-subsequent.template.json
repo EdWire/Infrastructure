@@ -56,9 +56,58 @@
       "metadata": {
         "description": "The name of a subnet in a virtual network to deploy the API Management service in."
       }
+    },
+    "apimSslKeyVaultName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name to the key vault that contains the SSL certificate to be used by the host names' custom domain."
+      }
+    },
+    "apimSslCertificateSecretKeyVaultUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "The url to the key vault certifcate's secret for the SSL certificate to be used by the host names' custom domain."
+      }
+    },
+    "apimProxyHostName": {
+      "type": "string",
+      "metadata": {
+        "description": "The APIM's proxy custom domain name"
+      }
+    },
+    "apimPortalHostName": {
+      "type": "string",
+      "metadata": {
+        "description": "The APIM's portal custom domain name"
+      }
+    },
+    "apimManagementHostName": {
+      "type": "string",
+      "metadata": {
+        "description": "The APIM's management custom domain name"
+      }
     }
   },
   "resources": [
+    {
+      "type": "Microsoft.KeyVault/vaults/accessPolicies",
+      "apiVersion": "2018-02-14",
+      "name": "[concat(parameters('keyVaultName'), '/add')]",
+      "dependsOn": [],
+      "properties": {
+        "accessPolicies": [
+          {
+            "objectId": "[reference(concat(resourceId('Microsoft.ApiManagement/service', parameters('apimServiceName')), '/providers/Microsoft.ManagedIdentity/Identities/default'), '2018-11-30').principalId]",
+            "tenantId": "[subscription().TenantId]",
+            "permissions": {
+              "secrets": [
+                "get"
+              ]
+            }
+          }
+        ]
+      }
+    },
     {
       "type": "Microsoft.ApiManagement/service",
       "name": "[parameters('apimServiceName')]",
@@ -81,18 +130,18 @@
         "hostnameConfigurations": [
           {
             "type": "Proxy",
-            "hostname": "[concat(parameters('dnsZone').cnameRecords[5], '.', parameters('dnsZone').zoneName)]",
-            "keyVaultId": "[parameters('certificates').sslCertificate.certificateSecretKeyVaultUrl]"
+            "hostName": "[parameters('apimProxyHostName')]",
+            "keyVaultId": "[parameters('apimSslCertificateSecretKeyVaultUrl')]"
           },
           {
             "type": "Portal",
-            "hostname": "[concat(parameters('dnsZone').cnameRecords[6], '.', parameters('dnsZone').zoneName)]",
-            "keyVaultId": "[parameters('certificates').sslCertificate.certificateSecretKeyVaultUrl]"
+            "hostName": "[parameters('apimPortalHostName')]",
+            "keyVaultId": "[parameters('apimSslCertificateSecretKeyVaultUrl')]"
           },
           {
             "type": "Management",
-            "hostname": "[concat(parameters('dnsZone').cnameRecords[7], '.', parameters('dnsZone').zoneName)]",
-            "keyVaultId": "[parameters('certificates').sslCertificate.certificateSecretKeyVaultUrl]"
+            "hostName": "[parameters('apimManagementHostName')]",
+            "keyVaultId": "[parameters('apimSslCertificateSecretKeyVaultUrl')]"
           }
         ],
         "virtualNetworkType": "[parameters('virtualNetworkType')]",

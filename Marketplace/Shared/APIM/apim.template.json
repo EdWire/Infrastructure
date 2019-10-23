@@ -88,6 +88,36 @@
       "metadata": {
         "description": "The service fabric cluster server certificate base 64"
       }
+    },
+    "apimSslKeyVaultName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name to the key vault that contains the SSL certificate to be used by the host names' custom domain."
+      }
+    },
+    "apimSslCertificateSecretKeyVaultUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "The url to the key vault certifcate's secret for the SSL certificate to be used by the host names' custom domain."
+      }
+    },
+    "apimProxyHostName": {
+      "type": "string",
+      "metadata": {
+        "description": "The APIM's proxy custom domain name"
+      }
+    },
+    "apimPortalHostName": {
+      "type": "string",
+      "metadata": {
+        "description": "The APIM's portal custom domain name"
+      }
+    },
+    "apimManagementHostName": {
+      "type": "string",
+      "metadata": {
+        "description": "The APIM's management custom domain name"
+      }
     }
   },
   "variables": {},
@@ -130,53 +160,68 @@
         }
       }
     },
-    //{
-    //  "type": "Microsoft.Resources/deployments",
-    //  "name": "apimServiceSubsequentTemplate",
-    //  "apiVersion": "2017-05-10",
-    //  "dependsOn": [
-    //    "[resourceId('Microsoft.Resources/deployments', 'apimServiceInitialTemplate')]"
-    //  ],
-    //  "properties": {
-    //    "mode": "Incremental",
-    //    "templateLink": {
-    //      "uri": "[concat(parameters('repoBaseUrl'), '/service/service-subsequent.template.json')]",
-    //      "contentVersion": "1.0.0.0"
-    //    },
-    //    "parameters": {
-    //      "apimServiceName": {
-    //        "value": "[parameters('apimServiceName')]"
-    //      },
-    //      "publisherName": {
-    //        "value": "[parameters('publisherName')]"
-    //      },
-    //      "publisherEmail": {
-    //        "value": "[parameters('publisherEmail')]"
-    //      },
-    //      "sku": {
-    //        "value": "[parameters('sku')]"
-    //      },
-    //      "skuCount": {
-    //        "value": "[parameters('skuCount')]"
-    //      },
-    //      "virtualNetworkType": {
-    //        "value": "[parameters('virtualNetworkType')]"
-    //      },
-    //      "virtualNetworkName": {
-    //        "value": "[parameters('virtualNetworkName')]"
-    //      },
-    //      "apimSubnetName": {
-    //        "value": "[parameters('apimSubnetName')]"
-    //      }
-    //    }
-    //  }
-    //},
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "apimServiceSubsequentTemplate",
+      "apiVersion": "2017-05-10",
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'apimServiceInitialTemplate')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('repoBaseUrl'), '/service/service-subsequent.template.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "apimServiceName": {
+            "value": "[parameters('apimServiceName')]"
+          },
+          "publisherName": {
+            "value": "[parameters('publisherName')]"
+          },
+          "publisherEmail": {
+            "value": "[parameters('publisherEmail')]"
+          },
+          "sku": {
+            "value": "[parameters('sku')]"
+          },
+          "skuCount": {
+            "value": "[parameters('skuCount')]"
+          },
+          "virtualNetworkType": {
+            "value": "[parameters('virtualNetworkType')]"
+          },
+          "virtualNetworkName": {
+            "value": "[parameters('virtualNetworkName')]"
+          },
+          "apimSubnetName": {
+            "value": "[parameters('apimSubnetName')]"
+          },
+          "apimSslKeyVaultName": {
+            "value": "[parameters('apimSslKeyVaultName')]"
+          },
+          "apimSslCertificateSecretKeyVaultUrl": {
+            "value": "[parameters('apimSslCertificateSecretKeyVaultUrl')]"
+          },
+          "apimProxyHostName": {
+            "value": "[parameters('apimProxyHostName')]"
+          },
+          "apimPortalHostName": {
+            "value": "[parameters('apimPortalHostName')]"
+          },
+          "apimManagementHostName": {
+            "value": "[parameters('apimManagementHostName')]"
+          }
+        }
+      }
+    },
     {
       "type": "Microsoft.Resources/deployments",
       "name": "serviceFabricCertificateTemplate",
       "apiVersion": "2017-05-10",
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'apimServiceInitialTemplate')]"
+        "[resourceId('Microsoft.Resources/deployments', 'apimServiceSubsequentTemplate')]"
       ],
       "properties": {
         "mode": "Incremental",
@@ -195,7 +240,7 @@
       "name": "serviceFabricBackendTemplate",
       "apiVersion": "2017-05-10",
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'apimServiceInitialTemplate')]"
+        "[resourceId('Microsoft.Resources/deployments', 'serviceFabricCertificateTemplate')]"
       ],
       "properties": {
         "mode": "Incremental",
@@ -213,10 +258,28 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
+      "name": "productAnonymousTemplate",
+      "apiVersion": "2017-05-10",
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'apimServiceSubsequentTemplate')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('repoBaseUrl'), '/products/product-anonymous.template.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "apimServiceName": { "value": "[parameters('apimServiceName')]" }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
       "name": "productStarterTemplate",
       "apiVersion": "2017-05-10",
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'apimServiceInitialTemplate')]"
+        "[resourceId('Microsoft.Resources/deployments', 'apimServiceSubsequentTemplate')]"
       ],
       "properties": {
         "mode": "Incremental",
@@ -234,7 +297,7 @@
       "name": "productUnlimitedTemplate",
       "apiVersion": "2017-05-10",
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'apimServiceInitialTemplate')]"
+        "[resourceId('Microsoft.Resources/deployments', 'apimServiceSubsequentTemplate')]"
       ],
       "properties": {
         "mode": "Incremental",
@@ -271,7 +334,7 @@
     //  "name": "edfiVersionSetTemplate",
     //  "apiVersion": "2017-05-10",
     //  "dependsOn": [
-    //    "[resourceId('Microsoft.Resources/deployments', 'apimServiceInitialTemplate')]"
+    //    "[resourceId('Microsoft.Resources/deployments', 'apimServiceSubsequentTemplate')]"
     //  ],
     //  "properties": {
     //    "mode": "Incremental",
