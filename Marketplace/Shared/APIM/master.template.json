@@ -152,10 +152,10 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "name": "edfiv32Template",
+      "name": "edfiv32InitialApiTemplate",
       "apiVersion": "2017-05-10",
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'serviceTemplate')]"
+        "[resourceId('Microsoft.Resources/deployments', 'edfiVersionSetTemplate')]"
       ],
       "properties": {
         "mode": "Incremental",
@@ -170,10 +170,10 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "name": "edfiv32Template",
+      "name": "edfiv32SubsequentApiTemplate",
       "apiVersion": "2017-05-10",
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'serviceTemplate')]"
+        "[resourceId('Microsoft.Resources/deployments', 'edfiv32InitialApiTemplate')]"
       ],
       "properties": {
         "mode": "Incremental",
