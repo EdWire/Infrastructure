@@ -102,6 +102,10 @@
         "portalUrl": "[concat('https://', parameters('apimServiceName'),'.portal.azure-api.net')]",
         "managementApiUrl": "[concat('https://', parameters('apimServiceName'),'.management.azure-api.net')]",
         "scmUrl": "[concat('https://', parameters('apimServiceName'),'.scm.azure-api.net')]",
+        "virtualNetworkType": "[parameters('virtualNetworkType')]",
+        "virtualNetworkConfiguration": {
+          "subnetResourceId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworkName'), parameters('apimSubnetName'))]"
+        },
         "hostnameConfigurations": [
           {
             "type": "Proxy",
@@ -118,11 +122,7 @@
             "hostName": "[parameters('apimManagementHostName')]",
             "keyVaultId": "[parameters('apimSslCertificateSecretKeyVaultUrl')]"
           }
-        ],
-        "virtualNetworkType": "[parameters('virtualNetworkType')]",
-        "virtualNetworkConfiguration": {
-          "subnetResourceId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworkName'), parameters('apimSubnetName'))]"
-        }
+        ]
       },
       "tags": {
         "Scope": "EdGraph",
