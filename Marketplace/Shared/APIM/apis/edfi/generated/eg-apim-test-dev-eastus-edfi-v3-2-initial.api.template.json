@@ -1,0 +1,35 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "ApimServiceName": {
+      "type": "string"
+    }
+  },
+  "resources": [
+    {
+      "properties": {
+        "description": "Ed-Fi v3.2",
+        "type": "http",
+        "apiRevision": "1",
+        "apiVersion": "v3.2",
+        "isCurrent": true,
+        "apiRevisionDescription": "Initial Revision",
+        "apiVersionDescription": "Ed-Fi v3.2",
+        "apiVersionSetId": "[resourceId('Microsoft.ApiManagement/service/apiVersionSets', parameters('ApimServiceName'), 'edfiVersionSetID')]",
+        "subscriptionRequired": true,
+        "displayName": "edfi-v3-2",
+        "serviceUrl": "https://api-eastus.edgraph.dev",
+        "path": "edfi",
+        "protocols": [
+          "https"
+        ],
+        "apiType": "http"
+      },
+      "name": "[concat(parameters('ApimServiceName'), '/edfi-v3-2')]",
+      "type": "Microsoft.ApiManagement/service/apis",
+      "apiVersion": "2019-01-01",
+      "dependsOn": []
+    }
+  ]
+}

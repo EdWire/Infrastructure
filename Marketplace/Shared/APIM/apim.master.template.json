@@ -309,7 +309,7 @@
           "apimServiceName": { "value": "[parameters('apimServiceName')]" }
         }
       }
-    }
+    },
     //{
     //  "type": "Microsoft.Resources/deployments",
     //  "name": "subscriptionsTemplate",
@@ -330,60 +330,60 @@
     //    }
     //  }
     //},
-    //{
-    //  "type": "Microsoft.Resources/deployments",
-    //  "name": "edfiVersionSetTemplate",
-    //  "apiVersion": "2017-05-10",
-    //  "dependsOn": [
-    //    "[resourceId('Microsoft.Resources/deployments', 'apimServiceSubsequentTemplate')]"
-    //  ],
-    //  "properties": {
-    //    "mode": "Incremental",
-    //    "templateLink": {
-    //      "uri": "[concat(parameters('repoBaseUrl'), '/apis/edfi/eg-apim-test-dev-eastus-apiVersionSets.template.json')]",
-    //      "contentVersion": "1.0.0.0"
-    //    },
-    //    "parameters": {
-    //      "apimServiceName": { "value": "[parameters('apimServiceName')]" }
-    //    }
-    //  }
-    //},
-    //{
-    //  "type": "Microsoft.Resources/deployments",
-    //  "name": "edfiv32InitialApiTemplate",
-    //  "apiVersion": "2017-05-10",
-    //  "dependsOn": [
-    //    "[resourceId('Microsoft.Resources/deployments', 'edfiVersionSetTemplate')]"
-    //  ],
-    //  "properties": {
-    //    "mode": "Incremental",
-    //    "templateLink": {
-    //      "uri": "[concat(parameters('repoBaseUrl'), '/apis/edfi/eg-apim-test-dev-eastus-edfi-v3-2-initial.api.template.json')]",
-    //      "contentVersion": "1.0.0.0"
-    //    },
-    //    "parameters": {
-    //      "apimServiceName": { "value": "[parameters('apimServiceName')]" }
-    //    }
-    //  }
-    //},
-    //{
-    //  "type": "Microsoft.Resources/deployments",
-    //  "name": "edfiv32SubsequentApiTemplate",
-    //  "apiVersion": "2017-05-10",
-    //  "dependsOn": [
-    //    "[resourceId('Microsoft.Resources/deployments', 'edfiv32InitialApiTemplate')]"
-    //  ],
-    //  "properties": {
-    //    "mode": "Incremental",
-    //    "templateLink": {
-    //      "uri": "[concat(parameters('repoBaseUrl'), '/apis/edfi/eg-apim-test-dev-eastus-edfi-v3-2-subsequent.api.template.json')]",
-    //      "contentVersion": "1.0.0.0"
-    //    },
-    //    "parameters": {
-    //      "apimServiceName": { "value": "[parameters('apimServiceName')]" }
-    //    }
-    //  }
-    //}
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "edfiVersionSetTemplate",
+      "apiVersion": "2017-05-10",
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'apimServiceSubsequentTemplate')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('repoBaseUrl'), '/apis/edfi/generated/eg-apim-test-dev-eastus-apiVersionSets.template.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "apimServiceName": { "value": "[parameters('apimServiceName')]" }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "edfiv32InitialApiTemplate",
+      "apiVersion": "2017-05-10",
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'edfiVersionSetTemplate')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('repoBaseUrl'), '/apis/edfi/generated/eg-apim-test-dev-eastus-edfi-v3-2-initial.api.template.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "apimServiceName": { "value": "[parameters('apimServiceName')]" }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "edfiv32SubsequentApiTemplate",
+      "apiVersion": "2017-05-10",
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'edfiv32InitialApiTemplate')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('repoBaseUrl'), '/apis/edfi/generated/eg-apim-test-dev-eastus-edfi-v3-2-subsequent.api.template.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "apimServiceName": { "value": "[parameters('apimServiceName')]" }
+        }
+      }
+    }
   ],
   "outputs": {
   }
