@@ -240,7 +240,7 @@
       "name": "apimServiceFabricBackendTemplate",
       "apiVersion": "2017-05-10",
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'apimServiceFabricCertificateTemplate')]"
+        "[resourceId('Microsoft.Resources/deployments', 'apimServiceSubsequentTemplate')]"
       ],
       "properties": {
         "mode": "Incremental",
