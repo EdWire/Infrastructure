@@ -14,8 +14,21 @@
       "scale": null,
       "properties": {
         "ownerId": "[resourceId('Microsoft.ApiManagement/service/users', parameters('apimServiceName'), '1')]",
-        "scope": "[resourceId('Microsoft.ApiManagement/service/products', parameters('apimServiceName'), 'unlimited')]",
+        "scope": "[resourceId('Microsoft.ApiManagement/service/products', parameters('apimServiceName'), 'starter')]",
         "displayName": "Starter product subscription",
+        "allowTracing": true,
+        "state": "active"
+      }
+    },
+    {
+      "type": "Microsoft.ApiManagement/service/subscriptions",
+      "name": "[concat(parameters('apimServiceName'), '/53c765632095310385070002')]",
+      "apiVersion": "2019-01-01",
+      "scale": null,
+      "properties": {
+        "ownerId": "[resourceId('Microsoft.ApiManagement/service/users', parameters('apimServiceName'), '1')]",
+        "scope": "[resourceId('Microsoft.ApiManagement/service/products', parameters('apimServiceName'), 'unlimited')]",
+        "displayName": "Unlimited product subscription",
         "primaryKey": "07eeae70569b4af3af9b6cea759e7928",
         "secondaryKey": "0168da4eff0946ecba2d4b7d2e82e7f1",
         "allowTracing": true,
