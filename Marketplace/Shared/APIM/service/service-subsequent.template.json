@@ -91,8 +91,8 @@
   "resources": [
     {
       "type": "Microsoft.KeyVault/vaults/accessPolicies",
+      "name": "[concat(parameters('apimSslKeyVaultName'), '/add')]",
       "apiVersion": "2018-02-14",
-      "name": "[concat(parameters('keyVaultName'), '/add')]",
       "dependsOn": [],
       "properties": {
         "accessPolicies": [
