@@ -19,8 +19,6 @@
         "displayName": "Anonymous",
         "description": "Do need a Subscription Key to call Apis associated to this product",
         "subscriptionRequired": false,
-        "approvalRequired": false,
-        "subscriptionsLimit": 1,
         "state": "published"
       }
     }
