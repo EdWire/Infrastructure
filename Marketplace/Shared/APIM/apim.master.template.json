@@ -218,7 +218,7 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "name": "serviceFabricCertificateTemplate",
+      "name": "apimServiceFabricCertificateTemplate",
       "apiVersion": "2017-05-10",
       "dependsOn": [
         "[resourceId('Microsoft.Resources/deployments', 'apimServiceSubsequentTemplate')]"
@@ -237,7 +237,7 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "name": "serviceFabricBackendTemplate",
+      "name": "apimServiceFabricBackendTemplate",
       "apiVersion": "2017-05-10",
       "dependsOn": [
         "[resourceId('Microsoft.Resources/deployments', 'serviceFabricCertificateTemplate')]"
@@ -258,7 +258,7 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "name": "productAnonymousTemplate",
+      "name": "apimProductAnonymousTemplate",
       "apiVersion": "2017-05-10",
       "dependsOn": [
         "[resourceId('Microsoft.Resources/deployments', 'apimServiceSubsequentTemplate')]"
@@ -276,7 +276,7 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "name": "productStarterTemplate",
+      "name": "apimProductStarterTemplate",
       "apiVersion": "2017-05-10",
       "dependsOn": [
         "[resourceId('Microsoft.Resources/deployments', 'apimServiceSubsequentTemplate')]"
@@ -294,7 +294,7 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "name": "productUnlimitedTemplate",
+      "name": "apimProductUnlimitedTemplate",
       "apiVersion": "2017-05-10",
       "dependsOn": [
         "[resourceId('Microsoft.Resources/deployments', 'apimServiceSubsequentTemplate')]"
@@ -315,8 +315,9 @@
     //  "name": "subscriptionsTemplate",
     //  "apiVersion": "2017-05-10",
     //  "dependsOn": [
-    //    "[resourceId('Microsoft.Resources/deployments', 'productStarterTemplate')]",
-    //    "[resourceId('Microsoft.Resources/deployments', 'productUnlimitedTemplate')]"
+    //    "[resourceId('Microsoft.Resources/deployments', 'apimProductAnonymousTemplate')]",
+    //    "[resourceId('Microsoft.Resources/deployments', 'apimProductStarterTemplate')]",
+    //    "[resourceId('Microsoft.Resources/deployments', 'apimProductUnlimitedTemplate')]"
     //  ],
     //  "properties": {
     //    "mode": "Incremental",
