@@ -105,24 +105,24 @@
         "virtualNetworkType": "[parameters('virtualNetworkType')]",
         "virtualNetworkConfiguration": {
           "subnetResourceId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworkName'), parameters('apimSubnetName'))]"
-        }
-        //"hostnameConfigurations": [
-        //  {
-        //    "type": "Proxy",
-        //    "hostName": "[parameters('apimProxyHostName')]",
-        //    "keyVaultId": "[parameters('apimSslCertificateSecretKeyVaultUrl')]"
-        //  },
-        //  {
-        //    "type": "Portal",
-        //    "hostName": "[parameters('apimPortalHostName')]",
-        //    "keyVaultId": "[parameters('apimSslCertificateSecretKeyVaultUrl')]"
-        //  },
-        //  {
-        //    "type": "Management",
-        //    "hostName": "[parameters('apimManagementHostName')]",
-        //    "keyVaultId": "[parameters('apimSslCertificateSecretKeyVaultUrl')]"
-        //  }
-        //]
+        },
+        "hostnameConfigurations": [
+          {
+            "type": "Proxy",
+            "hostName": "[parameters('apimProxyHostName')]",
+            "keyVaultId": "[parameters('apimSslCertificateSecretKeyVaultUrl')]"
+          },
+          {
+            "type": "Portal",
+            "hostName": "[parameters('apimPortalHostName')]",
+            "keyVaultId": "[parameters('apimSslCertificateSecretKeyVaultUrl')]"
+          },
+          {
+            "type": "Management",
+            "hostName": "[parameters('apimManagementHostName')]",
+            "keyVaultId": "[parameters('apimSslCertificateSecretKeyVaultUrl')]"
+          }
+        ]
       },
       "tags": {
         "Scope": "EdGraph",

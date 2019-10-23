@@ -36,13 +36,13 @@
       "value": "https://eg-kv-dev-eastus.vault.azure.net/secrets/wildcard-edgraph-dot-dev-pfx/ab585d5900764176b6df8f1b67de3de0"
     },
     "apimProxyHostName": {
-      "value": "api-eastus"
+      "value": "api-eastus.edgraph.dev"
     },
     "apimPortalHostName": {
-      "value": "developer-eastus"
+      "value": "developer-eastus.edgraph.dev"
     },
     "apimManagementHostName": {
-      "value": "mgmt-api-eastus"
+      "value": "mgmt-api-eastus.edgraph.dev"
     }
   }
 }
