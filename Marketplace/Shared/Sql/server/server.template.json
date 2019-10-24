@@ -1,0 +1,48 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "sqlServerName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the SQL Server"
+      }
+    },
+    "sqlServerAdminLogin": {
+      "type": "string",
+      "metadata": {
+        "description": "The SQL Authentication login for the adminsitrator"
+      }
+    },
+    "sqlServerAdminPassword": {
+      "type": "string",
+      "metadata": {
+        "description": "The SQL Authentication login for the adminsitrator"
+      }
+    },
+    "sqlServerVersion": {
+      "type": "string",
+      "defaultValue": "12.0",
+      "metadata": {
+        "description": "The SQL Authentication login for the adminsitrator"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Sql/servers",
+      "name": "[parameters('sqlServerName')]",
+      "apiVersion": "2015-05-01-preview",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "administratorLogin": "[parameters('sqlServerAdminLogin')]",
+        "administratorLoginPassword": "[parameters('sqlServerAdminPassword')]",
+        "version": "[parameters('sqlServerVersion')]"
+      },
+      "tags": {
+        "Scope": "EdGraph",
+        "Type": "API Management"
+      }
+    }
+  ]
+}

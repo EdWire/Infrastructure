@@ -13,13 +13,10 @@
 #   - Create Azure AD Application for access to the SF Cluster Management Endpoint
 #     - Use the Application IDs in the parameters file
 
-# cd D:\GitHub\EdWire\Infrastructure\Marketplace\Shared\KeyVault
-
-# Alachua Prod
-# .\Deploy-EdGraph-KeyVault.ps1 -AzureSubscriptionName "ACPS (Production)" -ResourceGroupName "edgraph-prod-eastus" -ResourceGroupLocation "EastUS" -ParameterFileUri "keyvault.parameters.acps.prod.eastus.json"
+# cd D:\GitHub\EdWire\Infrastructure\Marketplace\Shared\APIM
 
 # EdWire Prod
-# .\Deploy-EdGraph-KeyVault.ps1 -AzureSubscriptionName "Development" -ResourceGroupName "eg-edgraph-dev-eastus" -ResourceGroupLocation "EastUS" -ParameterFileUri "keyvault.parameters.edwire.prod.eastus.json"
+# .\Deploy-EdGraph-APIM.ps1 -AzureSubscriptionName "Development" -ResourceGroupName "eg-edgraph-dev-eastus" -ResourceGroupLocation "EastUS" -ParameterFileUri "apim.master.parameters.json"
 
 #---------------------------
 # Input Parameters
@@ -30,7 +27,7 @@ Param (
     [String] $AzureSubscriptionName,
     [String] $ResourceGroupName,
     [String] $ResourceGroupLocation,
-    [String] $RepositoryBaseUrl = 'https://raw.githubusercontent.com/EdWire/Infrastructure/Development_LinkedTemplates/Marketplace/Shared/KeyVault',
+    [String] $RepositoryBaseUrl = 'https://raw.githubusercontent.com/EdWire/Infrastructure/Development_LinkedTemplates/Marketplace/Shared/APIM',
     [String] $ParameterFileUri,
     [Switch] $ValidateOnly = $true
 )
@@ -82,7 +79,7 @@ Write-Output "Test-AzResourceGroupDeployment - Start"
 
 
 $deploymentTestResult = Test-AzResourceGroupDeployment  -ResourceGroupName $ResourceGroupName `
-                                                        -TemplateUri "$RepositoryBaseUrl/keyvault.master.template.json" `
+                                                        -TemplateUri "$RepositoryBaseUrl/apim.master.template.json" `
                                                         -TemplateParameterUri "$RepositoryBaseUrl/$ParameterFileUri" `
                                                         -Debug
 
@@ -93,7 +90,7 @@ if ([string]::IsNullOrEmpty($deploymentTestResult))
     Write-Output "New-AzResourceGroupDeployment - Starting deployment in $ResourceGroupName"
 
     New-AzResourceGroupDeployment   -ResourceGroupName $ResourceGroupName `
-                                    -TemplateUri "$RepositoryBaseUrl/keyvault.master.template.json" `
+                                    -TemplateUri "$RepositoryBaseUrl/apim.master.template.json" `
                                     -TemplateParameterUri "$RepositoryBaseUrl/$ParameterFileUri" `
                                     -Debug
 }

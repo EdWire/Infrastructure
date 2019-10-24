@@ -1,11 +1,8 @@
 // Pre-Deployment steps
-// 1- Create SSL certificate  (parameters => certificates)
-// 2- Create Data Encipherment certificate  (parameters => certificates)
-// 3- Create Resource Group
-// 4- Create KeyVault and upload above certificates  (parameters => certificates)
+// 1- Create KeyVault and upload above certificates  (parameters => certificates)
 //    - Keyvault must be in same region as deployment  (parameters => certificates)
-// 5- Create Azure AD security group for Administrators  (parameters => aadAdminSecurityGroupObjectId)
-// 6- (Optional) If using VPN, create a P2SRoot and P2SChild certificate  (parameters => vpn)
+// 2- Create Azure AD security group for Administrators  (parameters => aadAdminSecurityGroupObjectId)
+// 3- (Optional) If using VPN, create a P2SRoot and P2SChild certificate  (parameters => vpn)
 
 {
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",

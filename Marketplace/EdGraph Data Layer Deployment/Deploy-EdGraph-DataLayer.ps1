@@ -7,7 +7,7 @@
 # Notes
 #---------------------------
 
-# cd 'D:\EdWire\Git\EG.Deploy\EdGraph.Deploy\Marketplace\EdGraph Data Layer Deployment'
+# cd 'D:\GitHub\EdWire\Infrastructure\Marketplace\EdGraph Data Layer Deployment'
 
 # Alachua Prod 
 # .\Deploy-EdGraph-DataLayer.ps1 -AzureSubscriptionName "ACPS (Production)" -ResourceGroupName "edgraph-prod-eastus" -ResourceGroupLocation "EastUS" -ParameterFileUri "\dataLayerTemplate.parameters.acps.prod.eastus.json"
@@ -78,23 +78,11 @@ $deploymentTestResult = Test-AzResourceGroupDeployment  -ResourceGroupName $Reso
                                                         -TemplateParameterFile "$PSScriptRoot$ParameterFileUri" `
                                                         -Debug
 
-if ([string]::IsNullOrEmpty($deploymentTestResult) -and $ValidateOnly -eq $false)
+if ([string]::IsNullOrEmpty($deploymentTestResult))
 {
     Write-Output "Test-AzResourceGroupDeployment - Template is Valid"
 
     Write-Output "New-AzResourceGroupDeployment - Starting deployment in $ResourceGroupName"
-
-#    $sqlResourceProvider = Get-AzResourceProvider -ListAvailable | Where-Object ProviderNamespace -eq "Microsoft.Sql"
-
-#    if ($sqlResourceProvider.RegistrationState -eq "NotRegistered")
-#    {
-#        Write-Output "Registering Microsoft.Sql Azure Provider for this subscription"
-#        Register-AzResourceProvider -ProviderNamespace Microsoft.Sql
-#    }
-#    else
-#    {
-#        Write-Output "Microsoft.Sql Azure Provider already registered for this subscription"
-#    }    
 
     New-AzResourceGroupDeployment   -ResourceGroupName $ResourceGroupName `
                                     -TemplateFile "$PSScriptRoot\dataLayerTemplate.json" `
