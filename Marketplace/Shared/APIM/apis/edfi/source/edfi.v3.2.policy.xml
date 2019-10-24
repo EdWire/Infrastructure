@@ -1,22 +1,75 @@
-{
-  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-  "contentVersion": "1.0.0.0",
-  "parameters": {
-    "ApimServiceName": {
-      "type": "string"
-    }
-  },
-  "resources": [
-    {
-      "properties": {
-        "displayName": "Ed-Fi API",
-        "description": "Ed-Fi API",
-        "versioningScheme": "Segment"
-      },
-      "name": "[concat(parameters('ApimServiceName'), '/edfiVersionSetID')]",
-      "type": "Microsoft.ApiManagement/service/apiVersionSets",
-      "apiVersion": "2019-01-01",
-      "dependsOn": []
-    }
-  ]
-}
+<policies>
+    <inbound>
+        <base />
+        <set-header name="x-edgraph-instanceId" exists-action="override">
+            <value>@{ 
+                string[] pathSplit = context.Request.Url.Path.Split('/');
+                
+                if (pathSplit.Length > 0)
+                {
+                    Guid parsedGuid;
+
+                    if (Guid.TryParse(pathSplit[1], out parsedGuid))
+                    {
+                        return parsedGuid.ToString("D");
+                    }
+                    else
+                    {
+                        return string.Empty;
+                    }
+                }
+                else
+                {
+                    return string.Empty;
+                }
+            }</value>
+        </set-header>
+        <set-backend-service backend-id="servicefabric" sf-service-instance-name="@{ 
+                string[] instanceId;
+                
+                if (context.Request.Headers.TryGetValue("x-edgraph-instanceId", out instanceId))
+                {
+                    if (instanceId[0] != string.Empty)
+                    {
+                        return "fabric:/EdGraph.EdFi/v3.2/" + instanceId[0] + "/WebApi";
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+                else
+                {
+                    return null;
+                }
+            }" />
+        <rewrite-uri template="@{
+                string[] instanceId;
+                
+                if (context.Request.Headers.TryGetValue("x-edgraph-instanceId", out instanceId))
+                {
+                    if (instanceId[0] != string.Empty)
+                    {
+                        return context.Request.Url.Path.Replace('/' + instanceId[0], string.Empty);
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+                else
+                {
+                    return null;
+                }
+        }" />
+    </inbound>
+    <backend>
+        <base />
+    </backend>
+    <outbound>
+        <base />
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>
