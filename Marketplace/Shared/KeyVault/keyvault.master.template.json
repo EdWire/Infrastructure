@@ -1,0 +1,78 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "repoBaseUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "Base URL of the repository"
+      }
+    },
+    "keyvaultName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the Key Vault"
+      }
+    },
+    "sqlAdminUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "Username used to login to SQL Server (SQL Authentication)"
+      }
+    },
+    "sqlAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Password used to login to SQL Server (SQL Authentication)"
+      }
+    }
+  },
+  "variables": {},
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "keyvaultTemplate",
+      "apiVersion": "2017-05-10",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('repoBaseUrl'), '/keyvault/keyvault.template.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "keyVaultSecrets": {
+            "value": "[parameters('keyvaultName')]"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "keyvaultSecretsTemplate",
+      "apiVersion": "2017-05-10",
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'keyvaultTemplate')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('repoBaseUrl'), '/secrets/secrets-sql.template.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "keyvaultName": {
+            "value": "[parameters('keyvaultName')]"
+          },
+          "sqlAdminUsername": {
+            "value": "[parameters('sqlAdminUsername')]"
+          },
+          "sqlAdminPassword": {
+            "value": "[parameters('sqlAdminPassword')]"
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+  }
+}
