@@ -363,7 +363,7 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(parameters('repoBaseUrl'), '/apis/edfi/generated/eg-apim-test-dev-eastus-apiVersionSets.template.json')]",
+          "uri": "[concat(parameters('repoBaseUrl'), '/apis/edfi/api-edfi.version-set.template.json')]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
@@ -374,7 +374,7 @@
     {
       "condition": "[parameters('deployApis')]",
       "type": "Microsoft.Resources/deployments",
-      "name": "edfiv32InitialApiTemplate",
+      "name": "edfiv26ApiTemplate",
       "apiVersion": "2017-05-10",
       "dependsOn": [
         "[resourceId('Microsoft.Resources/deployments', 'edfiVersionSetTemplate')]"
@@ -382,26 +382,7 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(parameters('repoBaseUrl'), '/apis/edfi/generated/eg-apim-test-dev-eastus-edfi-v3-2-initial.api.template.json')]",
-          "contentVersion": "1.0.0.0"
-        },
-        "parameters": {
-          "apimServiceName": { "value": "[parameters('apimServiceName')]" }
-        }
-      }
-    },
-    {
-      "condition": "[parameters('deployApis')]",
-      "type": "Microsoft.Resources/deployments",
-      "name": "edfiv32SubsequentApiTemplate",
-      "apiVersion": "2017-05-10",
-      "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'edfiv32InitialApiTemplate')]"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[concat(parameters('repoBaseUrl'), '/apis/edfi/generated/eg-apim-test-dev-eastus-edfi-v3-2-subsequent.api.template.json')]",
+          "uri": "[concat(parameters('repoBaseUrl'), '/apis/edfi/v2.6/api-edfi.v2.6.template.json')]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
@@ -409,6 +390,25 @@
         }
       }
     }
+    //{
+    //  "condition": "[parameters('deployApis')]",
+    //  "type": "Microsoft.Resources/deployments",
+    //  "name": "edfiv32ApiTemplate",
+    //  "apiVersion": "2017-05-10",
+    //  "dependsOn": [
+    //    "[resourceId('Microsoft.Resources/deployments', 'edfiVersionSetTemplate')]"
+    //  ],
+    //  "properties": {
+    //    "mode": "Incremental",
+    //    "templateLink": {
+    //      "uri": "[concat(parameters('repoBaseUrl'), '/apis/edfi/v3.2/api-edfi.v3.2.template.json')]",
+    //      "contentVersion": "1.0.0.0"
+    //    },
+    //    "parameters": {
+    //      "apimServiceName": { "value": "[parameters('apimServiceName')]" }
+    //    }
+    //  }
+    //}
   ],
   "outputs": {
   }

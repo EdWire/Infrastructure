@@ -80,8 +80,7 @@ Write-Output "Test-AzResourceGroupDeployment - Start"
 
 $deploymentTestResult = Test-AzResourceGroupDeployment  -ResourceGroupName $ResourceGroupName `
                                                         -TemplateUri "$RepositoryBaseUrl/apim.master.template.json" `
-                                                        -TemplateParameterUri "$RepositoryBaseUrl/$ParameterFileUri" `
-                                                        -Debug
+                                                        -TemplateParameterUri "$RepositoryBaseUrl/$ParameterFileUri"
 
 if ([string]::IsNullOrEmpty($deploymentTestResult))
 {
