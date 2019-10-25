@@ -2,20 +2,6 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "deployService": {
-      "type": "bool",
-      "defaultValue": false,
-      "metadata": {
-        "description": "Base URL of the repository"
-      }
-    },
-    "deployApis": {
-      "type": "bool",
-      "defaultValue": true,
-      "metadata": {
-        "description": "Base URL of the repository"
-      }
-    },
     "repoBaseUrl": {
       "type": "string",
       "metadata": {
@@ -137,7 +123,6 @@
   "variables": {},
   "resources": [
     {
-      "condition": "[parameters('deployService')]",
       "type": "Microsoft.Resources/deployments",
       "name": "apimServiceInitialTemplate",
       "apiVersion": "2017-05-10",
@@ -179,7 +164,6 @@
       }
     },
     {
-      "condition": "[parameters('deployService')]",
       "type": "Microsoft.Resources/deployments",
       "name": "apimServiceSubsequentTemplate",
       "apiVersion": "2017-05-10",
@@ -233,7 +217,6 @@
       }
     },
     {
-      "condition": "[parameters('deployService')]",
       "type": "Microsoft.Resources/deployments",
       "name": "apimServiceFabricCertificateTemplate",
       "apiVersion": "2017-05-10",
@@ -253,7 +236,6 @@
       }
     },
     {
-      "condition": "[parameters('deployService')]",
       "type": "Microsoft.Resources/deployments",
       "name": "apimServiceFabricBackendTemplate",
       "apiVersion": "2017-05-10",
@@ -275,7 +257,6 @@
       }
     },
     {
-      "condition": "[parameters('deployService')]",
       "type": "Microsoft.Resources/deployments",
       "name": "apimProductAnonymousTemplate",
       "apiVersion": "2017-05-10",
@@ -294,7 +275,6 @@
       }
     },
     {
-      "condition": "[parameters('deployService')]",
       "type": "Microsoft.Resources/deployments",
       "name": "apimProductStarterTemplate",
       "apiVersion": "2017-05-10",
@@ -313,7 +293,6 @@
       }
     },
     {
-      "condition": "[parameters('deployService')]",
       "type": "Microsoft.Resources/deployments",
       "name": "apimProductUnlimitedTemplate",
       "apiVersion": "2017-05-10",
@@ -332,7 +311,6 @@
       }
     },
     //{
-    //  "condition": "[parameters('deployService')]",
     //  "type": "Microsoft.Resources/deployments",
     //  "name": "apimSubscriptionTemplate",
     //  "apiVersion": "2017-05-10",
@@ -353,7 +331,6 @@
     //  }
     //},
     {
-      "condition": "[parameters('deployApis')]",
       "type": "Microsoft.Resources/deployments",
       "name": "edfiVersionSetTemplate",
       "apiVersion": "2017-05-10",
@@ -372,7 +349,6 @@
       }
     },
     {
-      "condition": "[parameters('deployApis')]",
       "type": "Microsoft.Resources/deployments",
       "name": "edfiv26ApiTemplate",
       "apiVersion": "2017-05-10",
@@ -391,7 +367,6 @@
       }
     }
     //{
-    //  "condition": "[parameters('deployApis')]",
     //  "type": "Microsoft.Resources/deployments",
     //  "name": "edfiv32ApiTemplate",
     //  "apiVersion": "2017-05-10",

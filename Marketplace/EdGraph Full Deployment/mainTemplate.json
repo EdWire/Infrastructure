@@ -163,7 +163,7 @@
     "controlPlaneIp": "[variables('azureRegionToControlPlaneIp')[variables('locationObject').Name]]",
     "webappIp": "[variables('azureRegionToWebappIp')[variables('locationObject').Name]]",
     // Virtual Network
-    "virtualNetworkName": "[concat(parameters('core').resourcePrefix.shortName, '-vnet-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "virtualNetworkName": "[concat(parameters('core').resourcePrefix.name, '-vnet-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
     "vnetAddressSpace": "[concat(parameters('vnet').addressSpacePrefix, '.0.0/16')]",
     "vnetId": "[resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]",
     // Subnets
@@ -192,16 +192,16 @@
     "devopsSubnetRef": "[concat(variables('vnetId'),'/subnets/', variables('devopsSubnetName'))]",
     "vpnSubnetRef": "[concat(variables('vnetId'),'/subnets/', variables('vpnSubnetName'))]",
     // NSGs
-    "apimNsgName": "[concat(parameters('core').resourcePrefix.shortName, '-apim-nsg-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
-    "appGatewayNsgName": "[concat(parameters('core').resourcePrefix.shortName, '-appgateway-nsg-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
-    "devopsNsgName": "[concat(parameters('core').resourcePrefix.shortName, '-devops-nsg-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
-    "databricksNsgName": "[concat(parameters('core').resourcePrefix.shortName, '-databricks-nsg-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
-    "sfNsgName": "[concat(parameters('core').resourcePrefix.shortName, '-sf-nsg-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "apimNsgName": "[concat(parameters('core').resourcePrefix.name, '-apim-nsg-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "appGatewayNsgName": "[concat(parameters('core').resourcePrefix.name, '-appgateway-nsg-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "devopsNsgName": "[concat(parameters('core').resourcePrefix.name, '-devops-nsg-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "databricksNsgName": "[concat(parameters('core').resourcePrefix.name, '-databricks-nsg-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "sfNsgName": "[concat(parameters('core').resourcePrefix.name, '-sf-nsg-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
     // VPN
     "vpnSubnetId": "[concat(resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName')), '/subnets/', variables('vpnSubnetName'))]",
-    "vpnName": "[concat(parameters('core').resourcePrefix.shortName, '-vpn-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "vpnName": "[concat(parameters('core').resourcePrefix.name, '-vpn-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
     "vpnSku": "Basic",
-    "vpnPublicIpAddressName": "[concat(parameters('core').resourcePrefix.shortName, '-vpn-ip-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "vpnPublicIpAddressName": "[concat(parameters('core').resourcePrefix.name, '-vpn-ip-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
     // Load Balancer
     //"internalLBIpAddress": "[concat(parameters('vnet').addressSpacePrefix, '.6.4')]",
     "lbNt0Id": "[resourceId('Microsoft.Network/loadBalancers', variables('internalNt0LBName'))]",
@@ -247,10 +247,10 @@
     "supportLogStorageAccountName": "[toLower(concat(replace(parameters('core').resourcePrefix.shortName,'-', ''), 'sflogs', parameters('core').environment.name, variables('locationObject').Code))]",
     "applicationDiagnosticsStorageAccountName": "[toLower(concat(replace(parameters('core').resourcePrefix.shortName,'-', ''), 'sfdiag', parameters('core').environment.name, variables('locationObject').Code))]",
     "appStorageAccountName": "[toLower(concat(replace(parameters('core').resourcePrefix.shortName,'-', ''), 'appstorage', parameters('core').environment.name, variables('locationObject').Code))]",
-    "omsWorkspacename": "[concat(parameters('core').resourcePrefix.shortName, '-omsworkspace-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
-    "internalNt0LBName": "[concat(parameters('core').resourcePrefix.shortName, '-lb-internal-nt0-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
-    "internalNt1LBName": "[concat(parameters('core').resourcePrefix.shortName, '-lb-internal-nt1-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
-    "internalNt2LBName": "[concat(parameters('core').resourcePrefix.shortName, '-lb-internal-nt2-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "omsWorkspacename": "[concat(parameters('core').resourcePrefix.name, '-omsworkspace-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "internalNt0LBName": "[concat(parameters('core').resourcePrefix.name, '-lb-internal-nt0-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "internalNt1LBName": "[concat(parameters('core').resourcePrefix.name, '-lb-internal-nt1-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "internalNt2LBName": "[concat(parameters('core').resourcePrefix.name, '-lb-internal-nt2-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
     "nt0VmName": "[concat('sf', parameters('core').environment.abbr, variables('locationObject').Abbr, '0')]",
     "nt0VmNicName": "[concat(variables('nt0VmName') ,'-nic')]",
     "nt1VmName": "[concat('sf', parameters('core').environment.abbr, variables('locationObject').Abbr, '1')]",
@@ -266,21 +266,20 @@
     "ntreverseProxyEndpointPort": 19081,
     "vmssAdminUserName": "egvmadmin",
     "vmssAdminPassword": "[concat(uniqueString(subscription().subscriptionId), '!')]",
-    "sfClusterName": "[concat(parameters('core').resourcePrefix.shortName, '-sf-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "sfClusterName": "[concat(parameters('core').resourcePrefix.name, '-sf-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
     "sfClusterMangementEndpoint": "[concat('https://', parameters('dnsZone').sfClusterDns, '.', parameters('dnsZone').zoneName, ':19080')]",
     // App Gateway
-    "appGatewayName": "[concat(parameters('core').resourcePrefix.shortName, '-appgateway-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
-    "appGatewayDnsName": "[concat(parameters('core').resourcePrefix.shortName, '-appgateway-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
-    "appGatewayIPName": "[concat(parameters('core').resourcePrefix.shortName, '-appgateway-ip-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "appGatewayName": "[concat(parameters('core').resourcePrefix.name, '-appgateway-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "appGatewayDnsName": "[concat(parameters('core').resourcePrefix.name, '-appgateway-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "appGatewayIPName": "[concat(parameters('core').resourcePrefix.name, '-appgateway-ip-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
     "appGatewayID": "[resourceId('Microsoft.Network/applicationGateways', variables('appGatewayName'))]",
     "appGatewayCertificateSslName": "[concat('wildcard.', parameters('dnsZone').zoneName)]",
-    "appGatewayKeyVaultIdentity": "[concat(parameters('core').resourcePrefix.shortName, '-appgateway-identity-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "appGatewayKeyVaultIdentity": "[concat(parameters('core').resourcePrefix.name, '-appgateway-identity-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
     // API Management
-    "apimInstanceName": "[concat(parameters('core').resourcePrefix.shortName, '-apim-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
+    "apimInstanceName": "[concat(parameters('core').resourcePrefix.name, '-apim-', parameters('core').environment.name, '-', variables('locationObject').Code)]",
     "apimSubnetId": "[concat(resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName')), '/subnets/', variables('apimSubnetName'))]",
     // Cosmos DB
-    "cosmosdbServerName": "[concat(parameters('core').resourcePrefix.shortName, '-cosmos-', parameters('core').environment.name, '-global')]",
-    "apimSubnetId": "[concat(resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName')), '/subnets/', variables('apimSubnetName'))]"
+    "cosmosdbServerName": "[concat(parameters('core').resourcePrefix.name, '-cosmos-', parameters('core').environment.name, '-global')]"
   },
   "resources": [
     {

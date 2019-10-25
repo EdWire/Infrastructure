@@ -13,13 +13,14 @@
 #   - Create Azure AD Application for access to the SF Cluster Management Endpoint
 #     - Use the Application IDs in the parameters file
 
-# cd 'D:\EdWire\Git\EG.Deploy\EdGraph.Deploy\Marketplace\EdGraph Full Deployment'
-
-# Alachua Prod 
-# .\Deploy-EdGraph-DataLayer.ps1 -AzureSubscriptionName "ACPS (Production)" -ResourceGroupName "edgraph-prod-eastus" -ResourceGroupLocation "EastUS" -ParameterFileUri "\dataLayerTemplate.parameters.acps.prod.eastus.json"
+# cd 'D:\GitHub\EdWire\Infrastructure\Marketplace\EdGraph Full Deployment'
 
 # EdWire Prod
-# .\Deploy-EdGraph-DataLayer.ps1 -AzureSubscriptionName "Development" -ResourceGroupName "eg-edgraph-dev-eastus" -ResourceGroupLocation "EastUS" -ParameterFileUri "\dataLayerTemplate.parameters.edwire.dev.eastus.json"
+# .\Deploy-EdGraph-ServiceLayer.ps1 -AzureSubscriptionName "Development" -ResourceGroupName "eg-edgraph-dev-eastus" -ResourceGroupLocation "EastUS" -ParameterFileUri "\mainTemplate.parameters.edwire.dev.eastus.json"
+
+# Write Score Prod
+# .\Deploy-EdGraph-ServiceLayer.ps1 -AzureSubscriptionName "Pay-As-You-Go" -ResourceGroupName "ws-edgraph-prod-eastus" -ResourceGroupLocation "EastUS" -ParameterFileUri "\mainTemplate.parameters.writescore.prod.eastus.json"
+
 
 #---------------------------
 # Input Parameters
@@ -40,9 +41,6 @@ $ErrorActionPreference = "Stop"
 #---------------------------
 # Login and Select Azure Subscription
 #---------------------------
-
-# TODO Switch to certificate-based authentication?
-# https://docs.microsoft.com/en-us/powershell/azure/authenticate-azureps?view=azps-2.5.0
 
 # Establish connection to Azure
 if ([string]::IsNullOrWhiteSpace($AzureTenantId)) {
@@ -67,21 +65,13 @@ if ((Get-AzResourceGroup -Name $ResourceGroupName -Location $ResourceGroupLocati
 
 
 #---------------------------
-# Deploy Policies & RBAC to subscription
-#---------------------------
-
-# TODO Deploy Policies & RBAC to subscription
-#New-AzDeployment -Location <location> -TemplateFile <path-to-template>
-
-
-#---------------------------
 # Deploy Template
 #---------------------------
 Write-Output "New-AzResourceGroupDeployment - Start"
 
 $deploymentTestResult = Test-AzResourceGroupDeployment  -ResourceGroupName $ResourceGroupName `
                                                         -TemplateFile "$PSScriptRoot\mainTemplate.json" `
-                                                        -TemplateParameterFile "$ParameterFileUri" `
+                                                        -TemplateParameterFile "$PSScriptRoot\$ParameterFileUri" `
                                                         -Debug
 
 if ([string]::IsNullOrEmpty($deploymentTestResult) -and $ValidateOnly -eq $false)

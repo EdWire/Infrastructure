@@ -80,10 +80,14 @@ if ((Get-AzResourceGroup -Name $ResourceGroupName -Location $ResourceGroupLocati
 #---------------------------
 Write-Output "Test-AzResourceGroupDeployment - Start"
 
+#                                                        -TemplateParameterUri "$RepositoryBaseUrl/$ParameterFileUri" `
 
 $deploymentTestResult = Test-AzResourceGroupDeployment  -ResourceGroupName $ResourceGroupName `
                                                         -TemplateUri "$RepositoryBaseUrl/keyvault.master.template.json" `
-                                                        -TemplateParameterUri "$RepositoryBaseUrl/$ParameterFileUri" `
+                                                        -repoBaseUrl $RepositoryBaseUrl `
+                                                        -keyvaultName "acps-kv-prod-eastus" `
+                                                        -sqlAdminUsername "acpssqladmin" `
+                                                        -sqlAdminPassword "abc123!" `
                                                         -Debug
 
 if ([string]::IsNullOrEmpty($deploymentTestResult))
@@ -94,7 +98,10 @@ if ([string]::IsNullOrEmpty($deploymentTestResult))
 
     New-AzResourceGroupDeployment   -ResourceGroupName $ResourceGroupName `
                                     -TemplateUri "$RepositoryBaseUrl/keyvault.master.template.json" `
-                                    -TemplateParameterUri "$RepositoryBaseUrl/$ParameterFileUri" `
+                                    -repoBaseUrl $RepositoryBaseUrl `
+                                    -keyvaultName "acps-kv-prod-eastus" `
+                                    -sqlAdminUsername "acpssqladmin" `
+                                    -sqlAdminPassword "abc123!" `
                                     -Debug
 }
 else

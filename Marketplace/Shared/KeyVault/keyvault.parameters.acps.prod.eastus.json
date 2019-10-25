@@ -10,6 +10,9 @@
     },
     "sqlAdminUsername": {
       "value": "acpssqladmin"
+    },
+    "sqlAdminPassword": {
+      "value": "abc123!"
     }
   }
 }
