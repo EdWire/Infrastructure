@@ -16,43 +16,43 @@
     "apimServiceUrl": "[concat('https://', parameters('apimProxyHostName'))]"
   },
   "resources": [
-    //{
-    //  "type": "Microsoft.ApiManagement/service/apis",
-    //  "name": "[concat(parameters('apimServiceName'), '/edfi-api-v2-6')]",
-    //  "apiVersion": "2019-01-01",
-    //  "properties": {
-    //    "displayName": "Ed-Fi Api v2.6",
-    //    "apiRevision": "1",
-    //    "description": "Ed-Fi Api v2.6",
-    //    "serviceUrl": "[variables('apimServiceUrl')]",
-    //    "path": "edfi",
-    //    "protocols": [
-    //      "https"
-    //    ],
-    //    "apiVersion": "v2.6",
-    //    "apiVersionSetId": "[concat(resourceId('Microsoft.ApiManagement/service', parameters('apimServiceName')), '/api-version-sets/versionset-edfi-api')]",
-    //    "format": "swagger-link-json",
-    //    "value": "https://eginternaldevwestus.blob.core.windows.net/packages/EdGraph.EdFi.Ods.App/Core.2.6.0.0.20191010.1/edfi-core-oauth-descriptors-resources-types-enrollment.json?st=2019-10-26T15%3A14%3A47Z&se=2019-10-27T15%3A14%3A47Z&sp=rl&sv=2018-03-28&sr=b&sig=udT1ELdSLDokQ7x8gXcbtxBK0%2FAqPM4ZtfChS0pseLU%3D"
-    //  }
-    //},
-    //{
-    //  "type": "Microsoft.ApiManagement/service/products/apis",
-    //  "name": "[concat(parameters('apimServiceName'), '/starter/edfi-api-v2-6')]",
-    //  "apiVersion": "2019-01-01",
-    //  "properties": {},
-    //  "dependsOn": [
-    //    "[resourceId('Microsoft.ApiManagement/service/apis', parameters('apimServiceName'), 'edfi-api-v2-6')]"
-    //  ]
-    //},
-    //{
-    //  "type": "Microsoft.ApiManagement/service/products/apis",
-    //  "name": "[concat(parameters('apimServiceName'), '/unlimited/edfi-api-v2-6')]",
-    //  "apiVersion": "2019-01-01",
-    //  "properties": {},
-    //  "dependsOn": [
-    //    "[resourceId('Microsoft.ApiManagement/service/apis', parameters('apimServiceName'), 'edfi-api-v2-6')]"
-    //  ]
-    //},
+    {
+      "type": "Microsoft.ApiManagement/service/apis",
+      "name": "[concat(parameters('apimServiceName'), '/edfi-api-v2-6')]",
+      "apiVersion": "2019-01-01",
+      "properties": {
+        "displayName": "Ed-Fi Api v2.6",
+        "apiRevision": "1",
+        "description": "Ed-Fi Api v2.6",
+        "serviceUrl": "[variables('apimServiceUrl')]",
+        "path": "edfi",
+        "protocols": [
+          "https"
+        ],
+        "apiVersion": "v2.6",
+        "apiVersionSetId": "[concat(resourceId('Microsoft.ApiManagement/service', parameters('apimServiceName')), '/api-version-sets/versionset-edfi-api')]",
+        "format": "swagger-link-json",
+        "value": "https://eginternaldevwestus.blob.core.windows.net/packages/EdGraph.EdFi.Ods.App/Core.2.6.0.0.20191010.1/edfi-core-oauth-descriptors-resources-types-enrollment.json?st=2019-10-26T15%3A14%3A47Z&se=2019-10-27T15%3A14%3A47Z&sp=rl&sv=2018-03-28&sr=b&sig=udT1ELdSLDokQ7x8gXcbtxBK0%2FAqPM4ZtfChS0pseLU%3D"
+      }
+    },
+    {
+      "type": "Microsoft.ApiManagement/service/products/apis",
+      "name": "[concat(parameters('apimServiceName'), '/starter/edfi-api-v2-6')]",
+      "apiVersion": "2019-01-01",
+      "properties": {},
+      "dependsOn": [
+        "[resourceId('Microsoft.ApiManagement/service/apis', parameters('apimServiceName'), 'edfi-api-v2-6')]"
+      ]
+    },
+    {
+      "type": "Microsoft.ApiManagement/service/products/apis",
+      "name": "[concat(parameters('apimServiceName'), '/unlimited/edfi-api-v2-6')]",
+      "apiVersion": "2019-01-01",
+      "properties": {},
+      "dependsOn": [
+        "[resourceId('Microsoft.ApiManagement/service/apis', parameters('apimServiceName'), 'edfi-api-v2-6')]"
+      ]
+    },
     {
       "type": "Microsoft.ApiManagement/service/apis/policies",
       "name": "[concat(parameters('apimServiceName'), '/edfi-api-v2-6/policy')]",
@@ -62,10 +62,10 @@
         //"format": "xml-link"
         "value": "<policies>\r\n    <inbound>\r\n        <base />\r\n        <set-header name=\"x-edgraph-instanceId\" exists-action=\"override\">\r\n            <value>@{ \r\n                string[] pathSplit = context.Request.Url.Path.Split('/');\r\n                \r\n                if (pathSplit.Length > 0)\r\n                {\r\n                    Guid parsedGuid;\r\n\r\n                    if (Guid.TryParse(pathSplit[1], out parsedGuid))\r\n                    {\r\n                        return parsedGuid.ToString(\"D\");\r\n                    }\r\n                    else\r\n                    {\r\n                        return string.Empty;\r\n                    }\r\n                }\r\n                else\r\n                {\r\n                    return string.Empty;\r\n                }\r\n            }</value>\r\n        </set-header>\r\n        <set-backend-service backend-id=\"servicefabric\" sf-service-instance-name=\"@{ \r\n                string[] instanceId;\r\n                \r\n                if (context.Request.Headers.TryGetValue(\"x-edgraph-instanceId\", out instanceId))\r\n                {\r\n                    if (instanceId[0] != string.Empty)\r\n                    {\r\n                        return \"fabric:/EdGraph.EdFi/v2.6/\" + instanceId[0] + \"/WebApi\";\r\n                    }\r\n                    else\r\n                    {\r\n                        return null;\r\n                    }\r\n                }\r\n                else\r\n                {\r\n                    return null;\r\n                }\r\n            }\" />\r\n        <rewrite-uri template=\"@{\r\n                string[] instanceId;\r\n                \r\n                if (context.Request.Headers.TryGetValue(\"x-edgraph-instanceId\", out instanceId))\r\n                {\r\n                    if (instanceId[0] != string.Empty)\r\n                    {\r\n                        return context.Request.Url.Path.Replace('/' + instanceId[0], string.Empty);\r\n                    }\r\n                    else\r\n                    {\r\n                        return null;\r\n                    }\r\n                }\r\n                else\r\n                {\r\n                    return null;\r\n                }\r\n        }\" />\r\n    </inbound>\r\n    <backend>\r\n        <base />\r\n    </backend>\r\n    <outbound>\r\n        <base />\r\n    </outbound>\r\n    <on-error>\r\n        <base />\r\n    </on-error>\r\n</policies>",
         "format": "rawxml"
-      }
-      //"dependsOn": [
-      //  "[resourceId('Microsoft.ApiManagement/service/apis', parameters('apimServiceName'), 'edfi-api-v2-6')]"
-      //]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ApiManagement/service/apis', parameters('apimServiceName'), 'edfi-api-v2-6')]"
+      ]
     }
   ]
 }
