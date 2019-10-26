@@ -15,8 +15,8 @@
 
 # cd D:\GitHub\EdWire\Infrastructure\Marketplace\Shared\APIM
 
-# EdWire Prod
-# .\Deploy-EdGraph-APIM.ps1 -AzureSubscriptionName "Development" -ResourceGroupName "eg-edgraph-dev-eastus" -ResourceGroupLocation "EastUS" -ParameterFileUri "apim.master.parameters.json"
+# EdWire Dev East Us
+# .\Deploy-EdGraph-APIM.ps1 -AzureSubscriptionName "Development" -ResourceGroupName "eg-edgraph-dev-eastus" -ResourceGroupLocation "EastUS" -ParameterFileUri "apim.parameters.edwire.dev.eastus.json"
 
 #---------------------------
 # Input Parameters

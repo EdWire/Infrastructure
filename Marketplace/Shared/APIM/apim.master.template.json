@@ -386,7 +386,9 @@
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
-          "apimServiceName": { "value": "[parameters('apimServiceName')]" }
+          "repoBaseUrl": { "value": "[parameters('repoBaseUrl')]" },
+          "apimServiceName": { "value": "[parameters('apimServiceName')]" },
+          "apimProxyHostName": { "value": "[parameters('apimProxyHostName')]" }
         }
       }
     },
@@ -405,7 +407,9 @@
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
-          "apimServiceName": { "value": "[parameters('apimServiceName')]" }
+          "repoBaseUrl": { "value": "[parameters('repoBaseUrl')]" },
+          "apimServiceName": { "value": "[parameters('apimServiceName')]" },
+          "apimProxyHostName": { "value": "[parameters('apimProxyHostName')]" }
         }
       }
     }
