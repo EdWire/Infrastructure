@@ -1,4 +1,4 @@
-<policies>
+﻿<policies>
     <inbound>
         <base />
         <set-header name="x-edgraph-instanceId" exists-action="override">
@@ -31,7 +31,7 @@
                 {
                     if (instanceId[0] != string.Empty)
                     {
-                        return "fabric:/EdGraph.EdFi/v2.6/" + instanceId[0] + "/WebApi";
+                        return "fabric:/EdGraph.EdFi/v3.2/" + instanceId[0] + "/WebApi";
                     }
                     else
                     {
