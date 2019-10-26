@@ -398,7 +398,7 @@
       "name": "edfiv32ApiTemplate",
       "apiVersion": "2017-05-10",
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'edfiVersionSetTemplate')]"
+        "[resourceId('Microsoft.Resources/deployments', 'edfiv26ApiTemplate')]"
       ],
       "properties": {
         "mode": "Incremental",

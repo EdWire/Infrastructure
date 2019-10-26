@@ -29,7 +29,7 @@ Param (
     [String] $ResourceGroupLocation,
     [String] $RepositoryBaseUrl = 'https://raw.githubusercontent.com/EdWire/Infrastructure/Development_LinkedTemplates/Marketplace/Shared/APIM',
     [String] $ParameterFileUri,
-    [Switch] $ValidateOnly = $true
+    [Switch] $ValidateOnly = $false
 )
 
 # Stop the script on first error
@@ -38,9 +38,6 @@ $ErrorActionPreference = "Stop"
 #---------------------------
 # Login and Select Azure Subscription
 #---------------------------
-
-# TODO Switch to certificate-based authentication?
-# https://docs.microsoft.com/en-us/powershell/azure/authenticate-azureps?view=azps-2.5.0
 
 # Establish connection to Azure
 if ([string]::IsNullOrWhiteSpace($AzureTenantId)) {
@@ -65,24 +62,16 @@ if ((Get-AzResourceGroup -Name $ResourceGroupName -Location $ResourceGroupLocati
 
 
 #---------------------------
-# Deploy Policies & RBAC to subscription
-#---------------------------
-
-# TODO Deploy Policies & RBAC to subscription
-#New-AzDeployment -Location <location> -TemplateFile <path-to-template>
-
-
-#---------------------------
 # Deploy Template
 #---------------------------
-Write-Output "Test-AzResourceGroupDeployment - Start"
 
+Write-Output "Test-AzResourceGroupDeployment - Start"
 
 $deploymentTestResult = Test-AzResourceGroupDeployment  -ResourceGroupName $ResourceGroupName `
                                                         -TemplateUri "$RepositoryBaseUrl/apim.master.template.json" `
                                                         -TemplateParameterUri "$RepositoryBaseUrl/$ParameterFileUri"
 
-if ([string]::IsNullOrEmpty($deploymentTestResult))
+if ([string]::IsNullOrEmpty($deploymentTestResult) -and $ValidateOnly -eq $false)
 {
     Write-Output "Test-AzResourceGroupDeployment - Template is Valid"
 
