@@ -59,7 +59,7 @@
       "apiVersion": "2019-01-01",
       "properties": {
         "value": "[concat(parameters('repoBaseUrl'), '/apis/edfi/v2.6/policy-edfi.v2.6.xml')]",
-        "format": "rawxml-link"
+        "format": "xml-link"
       }
       //"dependsOn": [
       //  "[resourceId('Microsoft.ApiManagement/service/apis', parameters('apimServiceName'), 'edfi-api-v2-6')]"
