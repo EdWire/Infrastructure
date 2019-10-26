@@ -1,4 +1,4 @@
-<policies>
+﻿<policies>
     <inbound>
         <base />
         <set-header name="x-edgraph-instanceId" exists-action="override">
