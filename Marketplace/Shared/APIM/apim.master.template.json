@@ -389,26 +389,26 @@
           "apimServiceName": { "value": "[parameters('apimServiceName')]" }
         }
       }
+    },
+    {
+      "condition": "[parameters('deployApis')]",
+      "type": "Microsoft.Resources/deployments",
+      "name": "edfiv32ApiTemplate",
+      "apiVersion": "2017-05-10",
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'edfiVersionSetTemplate')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('repoBaseUrl'), '/apis/edfi/v3.2/api-edfi.v3.2.template.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "apimServiceName": { "value": "[parameters('apimServiceName')]" }
+        }
+      }
     }
-    //{
-    //  "condition": "[parameters('deployApis')]",
-    //  "type": "Microsoft.Resources/deployments",
-    //  "name": "edfiv32ApiTemplate",
-    //  "apiVersion": "2017-05-10",
-    //  "dependsOn": [
-    //    "[resourceId('Microsoft.Resources/deployments', 'edfiVersionSetTemplate')]"
-    //  ],
-    //  "properties": {
-    //    "mode": "Incremental",
-    //    "templateLink": {
-    //      "uri": "[concat(parameters('repoBaseUrl'), '/apis/edfi/v3.2/api-edfi.v3.2.template.json')]",
-    //      "contentVersion": "1.0.0.0"
-    //    },
-    //    "parameters": {
-    //      "apimServiceName": { "value": "[parameters('apimServiceName')]" }
-    //    }
-    //  }
-    //}
   ],
   "outputs": {
   }
