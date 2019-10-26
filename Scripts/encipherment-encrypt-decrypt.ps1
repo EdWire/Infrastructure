@@ -24,13 +24,13 @@ function Get-DecryptedValue($encryptedValue) {
 $dataEnciphermentThumbprint = "329A3F8BD5D09FB85FAF70BE164DD8FAB7255CFA"
 
 # Database Value to Encrypt
-$value = 'pku5/^X,zMh_=t7s'
+$value = ''
 
 # SQL Server Administrator Password
 $encryptedValue = Invoke-ServiceFabricEncryptText -CertStore -CertThumbprint $dataEnciphermentThumbprint -Text $value -StoreLocation LocalMachine -StoreName My
 
-#$decryptedValue = Invoke-ServiceFabricDecryptText -CipherText $encryptedValue -StoreLocation LocalMachine
+$decryptedValue = Invoke-ServiceFabricDecryptText -CipherText $encryptedValue -StoreLocation LocalMachine
 
 
 Write-Output $encryptedValue
-#Write-Output $decryptedValue
+Write-Output $decryptedValue
