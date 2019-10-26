@@ -10,7 +10,7 @@
     {
       "type": "Microsoft.ApiManagement/service/api-version-sets",
       "name": "[concat(parameters('apimServiceName'), '/versionset-edfi-api')]",
-      "apiVersion": "2019-01-01",
+      "apiVersion": "2018-01-01",
       "properties": {
         "description": "Version set for Ed-Fi API",
         "displayName": "Ed-Fi API",
