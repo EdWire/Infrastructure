@@ -21,6 +21,9 @@
 # EdWire Prod East Us
 # .\Deploy-EdGraph-APIM.ps1 -AzureSubscriptionName "Production" -ResourceGroupName "eg-sf-prod-eastus" -ResourceGroupLocation "EastUS" -ParameterFileUri "apim.parameters.edwire.prod.eastus.json"
 
+# Write Score Prod East Us
+# .\Deploy-EdGraph-APIM.ps1 -AzureSubscriptionName "Pay-As-You-Go" -ResourceGroupName "ws-edgraph-prod-eastus" -ResourceGroupLocation "EastUS" -ParameterFileUri "apim.parameters.writescore.prod.eastus.json"
+
 #---------------------------
 # Input Parameters
 #---------------------------

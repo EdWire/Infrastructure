@@ -1,11 +1,19 @@
-﻿$sqlServerName = 'eg-sql-prod-eastus.database.windows.net'
-$sqlUsername = 'egsqlprod'
-$instanceId = '00000000-0000-0000-0000-000000000260'
+﻿$sqlServerName = 'eg-sql-dev-eastus.database.windows.net'
+$sqlUsername = 'egsqldev'
+$instanceId = '00000000-0000-0000-0000-000000000320'
 
 $appParameters = @{
-    "app:secretcert" = "329A3F8BD5D09FB85FAF70BE164DD8FAB7255CFA";
-    "app:edgraph:api:descriptorNamespacePrefix" = "http://ed-fi.org";
+    "app:secretcert" = "51CEBE8EFD2BF6AC2227A7AD49E77E47DCF78441";
+    "app:edgraph:api:apiStartupType" = "edgraphinstance";
     "app:edgraph:api:bearerTokenTimeoutMinutes" = "30";
+    "app:edgraph:api:bulkenabled" = "false";
+    "app:edgraph:api:changequeriesenabled" = "false";
+    "app:edgraph:api:compositesenabled" = "true";
+    "app:edgraph:api:excludedextensionsources" = "";
+    "app:edgraph:api:extensionsenabled" = "true";
+    "app:edgraph:api:identityenabled" = "false";
+    "app:edgraph:api:openApiMetadataenabled" = "true";
+    "app:edgraph:api:profilesenabled" = "true";
     "app:edgraph:sql:edfiods:connection" = "Data Source=tcp:$sqlServerName,1433;Initial Catalog=EdFi_{0};User Id=$sqlUsername;Password={password};Application Name=EdGraph.Connectors.EdFi.Api;Integrated Security=false;Encrypt=yes;Connection Timeout=180;MultipleActiveResultSets=True;Max Pool Size=200;Persist Security Info=True;";
     "app:edgraph:sql:edfiodsbulk:connection" = "Data Source=tcp:$sqlServerName,1433;Initial Catalog=EdFi_{0};User Id=$sqlUsername;Password={password};Application Name=EdGraph.Connectors.EdFi.Api;Integrated Security=false;Encrypt=yes;Connection Timeout=180;MultipleActiveResultSets=True;Max Pool Size=200;Persist Security Info=True;";
     "app:edgraph:sql:edfiadmin:connection" = "Data Source=tcp:$sqlServerName,1433;Initial Catalog=EdFi_Admin_$instanceId;User Id=$sqlUsername;Password={password};Application Name=EdGraph.Connectors.EdFi.Api;Integrated Security=false;Encrypt=yes;Connection Timeout=30;MultipleActiveResultSets=True;Max Pool Size=200";
@@ -19,10 +27,13 @@ $appParameters = @{
 #& "$PsScriptRoot\SF Instancing.ps1" -PublishPackage `
 & "$PsScriptRoot\SF Instancing.ps1" `
                                     -CreateApplicationInstance  `
-                                    -SfConnectionEndpoint "sf-eastus.edgraph.com:19000" `
-                                    -SfServerCertThumbprint "C7D1BE1C290B44FC0094EF1FC4D5080A117C1035" `
+                                    -SfConnectionEndpoint "sf-eastus.edgraph.dev:19000" `
+                                    -SfServerCertThumbprint "2A9B72F736BCECCD30A29763A6946C4D26E19835" `
                                     -AppTypeName "EdGraph.EdFi.Ods.AppType" `
-                                    -AppTypeVersion "Core.2.6.0.0.20191010.1" `
-                                    -AppName "fabric:/EdGraph.EdFi/v2.6/$instanceId" `
-                                    -AppPkgPath "https://eginternaldevwestus.blob.core.windows.net/packages/EdGraph.EdFi.Ods.App/Core.2.6.0.0.20191010.1/EdGraph.EdFi.Ods.App-Core.2.6.0.0.20191010.1.sfpkg?st=2019-10-27T01%3A28%3A08Z&se=2019-10-28T01%3A28%3A08Z&sp=rl&sv=2018-03-28&sr=b&sig=hLXxila6ZpD1AA5jVrwS%2Fe9ASBZvCL1t7E%2FaLLEmm7I%3D" `
+                                    -AppTypeVersion "Core.3.2.0.0.20191021.1" `
+                                    -AppName "fabric:/EdGraph.EdFi/v3.2/$instanceId" `
+                                    -AppPkgPath "https://eginternaldevwestus.blob.core.windows.net/packages/EdGraph.EdFi.Ods.App/Core.3.2.0.0.20191021.1/EdGraph.EdFi.Ods.App-Core.3.2.0.0.20191021.1.sfpkg?st=2019-10-27T02%3A20%3A40Z&se=2019-10-28T02%3A20%3A40Z&sp=rl&sv=2018-03-28&sr=b&sig=SavAma2DJXDR%2B1ziK19IuOSJzNkyXopioCrARdSAXkQ%3D" `
                                     -AppParameters $appParameters
+
+Connect-ServiceFabricCluster -ConnectionEndpoint sf-eastus.edgraph.dev:19000 -AzureActiveDirectory -ServerCertThumbprint "2A9B72F736BCECCD30A29763A6946C4D26E19835"
+Update-ServiceFabricService -Stateless -ServiceName "fabric:/EdGraph.EdFi/v3.2/$instanceId/WebApi" -PlacementConstraints "((type==backend) || (type==elastic))"
