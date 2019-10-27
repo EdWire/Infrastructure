@@ -32,7 +32,7 @@
         "apiVersion": "v3.2",
         "apiVersionSetId": "[concat(resourceId('Microsoft.ApiManagement/service', parameters('apimServiceName')), '/api-version-sets/versionset-edfi-api')]",
         "format": "swagger-link-json",
-        "value": "https://eginternaldevwestus.blob.core.windows.net/packages/EdGraph.EdFi.Ods.App/Core.3.2.0.0.20191021.1/edfi-core-oauth-descriptors-resources-enrollment.json?st=2019-10-26T15%3A15%3A37Z&se=2019-10-27T15%3A15%3A37Z&sp=rl&sv=2018-03-28&sr=b&sig=5TPRjBdA0%2Bk63ENVVFQ%2FpDHlchusWXlff9cKi49N3X8%3D"
+        "value": "https://eginternaldevwestus.blob.core.windows.net/packages/EdGraph.EdFi.Ods.App/Core.3.2.0.0.20191021.1/edfi-core-oauth-descriptors-resources-enrollment.json?st=2019-10-27T16%3A46%3A25Z&se=2019-10-28T16%3A46%3A25Z&sp=rl&sv=2018-03-28&sr=b&sig=8YOmL8WX6Mce7%2B6WjXK%2FOvMuDCLKpBdsOS9JD2amzlk%3D"
       }
     },
     {
