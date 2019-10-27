@@ -12,7 +12,7 @@
       "value": "https://raw.githubusercontent.com/EdWire/Infrastructure/Development_LinkedTemplates/Marketplace/Shared/APIM"
     },
     "apimServiceName": {
-      "value": "eg-apim-prod-eastus"
+      "value": "egapimprodeastus"
     },
     "virtualNetworkType": {
       "value": "Internal"
