@@ -23,7 +23,7 @@
     },
     "edfiDatabases": {
       "value": {
-        "enabled": true,
+        "enabled": false,
         "version": "v2.6",
         "instanceId": "ba484f65-0485-4b61-866f-0b74c9ddc2a0",
         "schoolYear": "2020"
@@ -31,10 +31,10 @@
     },
     "aadAdminGroup": {
       "value": {
-        "enabled": false,
-        "login": "Azure SQL Administrators",
-        "objectId": "5cdcf5cc-6179-4766-bf5b-08f1327c6c99",
-        "tenantId": "a9b292af-1f66-4d76-90c6-3cbfc0cbcaf2"
+        "enabled": true,
+        "login": "Ed-Fi SQL Administrators (Prod)",
+        "objectId": "eafcde0a-07c4-4b56-8a7c-7c26ca817ff0",
+        "tenantId": "80da76df-1865-4a01-aded-1af57fce20d9"
       }
     }
   }
