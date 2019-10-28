@@ -8,6 +8,13 @@
     "keyvaultName": {
       "value": "acps-kv-prod-eastus"
     },
+    "aadAdminGroup": {
+      "value": {
+        "enabled": true,
+        "objectId": "589a8c1e-756d-4f98-8ed6-ffccee8cfa1c",
+        "tenantId": "a9b292af-1f66-4d76-90c6-3cbfc0cbcaf2"
+      }
+    },
     "sqlAdminUsername": {
       "value": "acpssqladmin"
     },

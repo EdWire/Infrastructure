@@ -48,10 +48,27 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
+      "name": "keyvaultLighthousePoliciesTemplate",
+      "apiVersion": "2017-05-10",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('repoBaseUrl'), '/accesspolicies/accesspolicies-lighthouse.template.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "keyvaultName": {
+            "value": "[parameters('keyvaultName')]"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
       "name": "keyvaultSecretsTemplate",
       "apiVersion": "2017-05-10",
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'keyvaultTemplate')]"
+        "[resourceId('Microsoft.Resources/deployments', 'keyvaultLighthousePoliciesTemplate')]"
       ],
       "properties": {
         "mode": "Incremental",

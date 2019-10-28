@@ -1,0 +1,32 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "keyvaultName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the SQL Server"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.KeyVault/vaults/accessPolicies",
+      "apiVersion": "2018-02-14",
+      "name": "[concat(parameters('keyvaultName'), '/add')]",
+      "dependsOn": [],
+      "properties": {
+        "accessPolicies": [
+          {
+            "objectId": "589a8c1e-756d-4f98-8ed6-ffccee8cfa1c",
+            "tenantId": "a9b292af-1f66-4d76-90c6-3cbfc0cbcaf2",
+            "permissions": {
+              "secrets": [ "get", "list", "set", "delete", "backup", "restore", "recover", "purge" ],
+              "certificates": [ "get", "list", "delete", "create", "import", "update", "managecontacts", "getissuers", "listissuers", "setissuers", "deleteissuers", "manageissuers", "recover", "purge", "backup", "restore" ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

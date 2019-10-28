@@ -35,8 +35,8 @@
       },
       "tags": {
         "Scope": "EdGraph",
-        "Type": "Service Fabric"
+        "Type": "Security"
       }
-    },
+    }
   ]
 }
