@@ -11,6 +11,7 @@
 
 param(
     [switch]$PrepElasticSearch = $false,
+    [switch]$InstallJavaRuntime = $false,
     [switch]$SetPermissionToCertificate = $false,
     [string]$UserName = "Network Service",
     [string]$Permission = "full",
@@ -88,32 +89,40 @@ function PrepElasticSearch() {
 
     if ($dataDisk0)
     {
-        #---------------------------
-        # Install Java SDK
-        #---------------------------
-
-        Write-Output "-------------------------"
-        Write-Output "Installing Java SDK"
-        Write-Output "-------------------------"
-
-        # install chocolatey
-        Write-Output "Installing Chocolatey"
-
-        Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-
-        # install java
-        Write-Output "Installing Java Runtime"
-
-        choco install -y -force jre8 --version 8.0.161
-
-        Write-Output "Completed Installing Java SDK"
+        InstallJavaRuntime('8.0.161')
     }
 }
 
+function InstallJavaRuntime($jreVersion) {
+    #---------------------------
+    # Install Java SDK
+    #---------------------------
+
+    Write-Output "-------------------------"
+    Write-Output "Installing Java SDK"
+    Write-Output "-------------------------"
+
+    # install chocolatey
+    Write-Output "Installing Chocolatey"
+
+    Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+
+    # install java
+    Write-Output "Installing Java Runtime"
+
+    choco install -y -force jre8 --version $jreVersion
+
+    Write-Output "Completed Installing Java SDK"
+}
 
 if ($PrepElasticSearch -eq $true)
 {
     PrepElasticSearch
+}
+
+if ($InstallJavaRuntime -eq $true)
+{
+    InstallJavaRuntime('8.0.161')
 }
 
 if ($SetPermissionToCertificate -eq $true)
