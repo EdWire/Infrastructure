@@ -93,7 +93,7 @@ function PrepElasticSearch() {
     }
 }
 
-function InstallJavaRuntime($jreVersion) {
+function InstallJavaRuntime($jreVersion, $jrePath) {
     #---------------------------
     # Install Java SDK
     #---------------------------
@@ -111,6 +111,8 @@ function InstallJavaRuntime($jreVersion) {
     Write-Output "Installing Java Runtime"
 
     choco install -y -force jre8 --version $jreVersion
+    
+    setx -m JAVA_HOME $jrePath
 
     Write-Output "Completed Installing Java SDK"
 }
@@ -122,7 +124,7 @@ if ($PrepElasticSearch -eq $true)
 
 if ($InstallJavaRuntime -eq $true)
 {
-    InstallJavaRuntime('8.0.161')
+    InstallJavaRuntime('8.0.161', 'C:\Program Files\Java\jre1.8.0_161')
 }
 
 if ($SetPermissionToCertificate -eq $true)
