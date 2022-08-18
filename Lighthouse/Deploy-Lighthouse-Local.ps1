@@ -15,8 +15,8 @@
 #---------------------------
 
 Param (
-    [String] $AzureTenantId,
-    [String] $AzureSubscriptionName,
+    [String] $AzureTenantId = "[Customer's Azure Tenant Id]",
+    [String] $AzureSubscriptionName = "[Customer's Azure Subscription Name]",
     [String] $LighthouseTemplateFileUri = "$PSScriptRoot\lighthouseTemplate.json",
     [String] $LighthouseTemplateParameterFileUri = "$PSScriptRoot\lighthouseTemplate.volusia-edwire.parameters.json",
     [Switch] $ValidateOnly
