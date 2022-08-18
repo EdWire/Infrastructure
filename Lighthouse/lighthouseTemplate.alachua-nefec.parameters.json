@@ -3,16 +3,20 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "mspOfferName": {
-      "value": "NEFEC - Human Capital Portfolio"
-    },
-    "rgName": {
-      "value": "edgraph-prod-eastus"
+      "value": "NEFEC Managed Services"
     },
     "mspOfferDescription": {
-      "value": "Deployment of resources related to NEFEC's human capital portfolio"
+      "value": "NEFEC Managed Services"
     },
     "managedByTenantId": {
-      "value": "75c35801-20e7-4dc0-8f49-abdbf54894be"
+        "value": "75c35801-20e7-4dc0-8f49-abdbf54894be"
+    },    
+    "resourceGroups": {
+      "value": [
+          {
+              "rgName": "edgraph-prod-eastus"
+          }
+      ]
     },
     "authorizations": {
       "value": [

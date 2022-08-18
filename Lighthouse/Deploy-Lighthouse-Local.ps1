@@ -1,14 +1,24 @@
 ﻿#---------------------------
+# Instructions
+# - This must be run in a local PowerShell window.
+# - The user must log in with an account that has Azure Global Administrator permissions
+# - The resource group(s) that are part being given access to in the customer's Azure subscription must be created ahead of time
+# - Replace the $AzureTenantId variable with the customer's Azure Tenant Id where the resource being given access are located
+# - Replace the $AzureSubscriptionName variable with the customer's Azure Subscription Name where the resource being given access are located
+# - Create or Update the parameters file in Github that will be used by this script to create the permissions between the Partner and Customer's Azure Subscriptions 
+# - In the parameters file, make sure that the values are accurate
+# - Confirm that the parameter file URI is correct in $LighthouseTemplateParameterFileUri variable below
+#---------------------------
+
+#---------------------------
 # Input Parameters
 #---------------------------
 
 Param (
     [String] $AzureTenantId,
     [String] $AzureSubscriptionName,
-    [String] $ResourceGroupName,
-    [String] $ResourceGroupLocation,
     [String] $LighthouseTemplateFileUri = "$PSScriptRoot\lighthouseTemplate.json",
-    [String] $LighthouseTemplateParameterFileUri = "$PSScriptRoot\lighthouseTemplate.edwire.parameters.json",
+    [String] $LighthouseTemplateParameterFileUri = "$PSScriptRoot\lighthouseTemplate.volusia-edwire.parameters.json",
     [Switch] $ValidateOnly
 )
 
@@ -18,9 +28,6 @@ $ErrorActionPreference = "Stop"
 #---------------------------
 # Login and Select Azure Subscription
 #---------------------------
-
-# TODO Switch to certificate-based authentication?
-# https://docs.microsoft.com/en-us/powershell/azure/authenticate-azureps?view=azps-2.5.0
 
 # Establish connection to Azure
 Write-Output "Connecting to Azure..."
@@ -37,23 +44,8 @@ else
 # Select Subscription
 $azureSubscription = Set-AzContext -Subscription $AzureSubscriptionName
 
-Write-Output "Connected to Subscription"
+Write-Output "Connected to Subscription $AzureSubscriptionName"
 Write-Output $azureSubscription
-
-# Create Resource Gorup if it does not already exist
-$resourceGroup = Get-AzResourceGroup -Name  $ResourceGroupName -ErrorAction SilentlyContinue
-
-if ($resourceGroup -eq $null)
-{
-	Write-Output "Creating resource group $ResourceGroupName"
-
-	$resourceGroup = New-AzResourceGroup -Name $ResourceGroupName -Location $ResourceGroupLocation
-
-	Write-Output "Created resource group $ResourceGroupName"
-}
-
-Write-Output "Selected resource group"
-Write-Output $resourceGroup
 
 #---------------------------
 # Enable Azure Lighthouse (Delegated Resource Management)

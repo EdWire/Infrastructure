@@ -3,16 +3,20 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "mspOfferName": {
-      "value": "EdGraph Hybrid - Data Layer Only"
-    },
-    "rgName": {
-      "value": "edgraph-prod-eastus"
+      "value": "EdGraph Managed Services"
     },
     "mspOfferDescription": {
-      "value": "Deployment of resources related to EdGraph's data layer."
+      "value": "EdGraph Managed Services"
     },
     "managedByTenantId": {
-      "value": "a9b292af-1f66-4d76-90c6-3cbfc0cbcaf2"
+        "value": "a9b292af-1f66-4d76-90c6-3cbfc0cbcaf2"
+    },    
+    "resourceGroups": {
+      "value": [
+          {
+              "rgName": "edgraph-prod-eastus"
+          }
+      ]
     },
     "authorizations": {
       "value": [
