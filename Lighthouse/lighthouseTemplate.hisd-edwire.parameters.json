@@ -14,10 +14,10 @@
     "resourceGroups": {
       "value": [
           {
-            "rgName": "oea-dev"
+            "rgName": "RG-OEA_NonProd"
           },
           {
-            "rgName": "oea-prod"
+            "rgName": "RG-OEA_Prod"
           }
     ]
     },
