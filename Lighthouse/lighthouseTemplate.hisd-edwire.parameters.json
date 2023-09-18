@@ -1,0 +1,34 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "mspOfferName": {
+      "value": "EdGraph Managed Services"
+    },
+    "mspOfferDescription": {
+      "value": "EdGraph Managed Services"
+    },
+    "managedByTenantId": {
+        "value": "a9b292af-1f66-4d76-90c6-3cbfc0cbcaf2"
+    },    
+    "resourceGroups": {
+      "value": [
+          {
+            "rgName": "oea-dev"
+          },
+          {
+            "rgName": "oea-prod"
+          }
+    ]
+    },
+    "authorizations": {
+      "value": [
+        {
+          "principalId": "589a8c1e-756d-4f98-8ed6-ffccee8cfa1c",
+          "roleDefinitionId": "b24988ac-6180-42a0-ab88-20f7382dd24c",
+          "principalIdDisplayName": "EdGraph Tier 3 Support (Azure Lighthouse)"
+        }
+      ]
+    }
+  }
+}

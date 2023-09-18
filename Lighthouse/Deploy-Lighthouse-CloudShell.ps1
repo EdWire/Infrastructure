@@ -1,7 +1,7 @@
 ﻿#---------------------------
 # Instructions
 # - This must be run in the Azure Cloud Shell of the customer while logged in Azure Portal as a Azure Global Administrator
-# - The resource group(s) that are part being given access to in the customer's Azure subscription must be created ahead of time
+# - The resource group(s) that is being given access to in the customer's Azure subscription must be created ahead of time
 # - Replace the $AzureSubscriptionName variable with the customer's Azure Subscription Name where the resource being given access are located
 # - Create or Update the parameters file in Github that will be used by this script to create the permissions between the Partner and Customer's Azure Subscriptions 
 # - In the parameters file, make sure that the values are accurate
@@ -14,7 +14,7 @@
 
 $AzureSubscriptionName = "[Customer's Azure Subscription Name]"
 $LighthouseTemplateFileUri = "https://raw.githubusercontent.com/EdWire/Infrastructure/master/Lighthouse/lighthouseTemplate.json"
-$LighthouseTemplateParameterFileUri = "https://raw.githubusercontent.com/EdWire/Infrastructure/master/Lighthouse/lighthouseTemplate.volusia-edwire.parameters.json"
+$LighthouseTemplateParameterFileUri = "https://raw.githubusercontent.com/EdWire/Infrastructure/master/Lighthouse/lighthouseTemplate.hisd-edwire.parameters.json"
 $ValidateOnly = $true
 
 # Stop the script on first error
