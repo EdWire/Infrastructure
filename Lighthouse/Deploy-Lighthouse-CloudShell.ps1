@@ -12,42 +12,42 @@
 # Input Parameters
 #---------------------------
 
-$AzureSubscriptionName = "HISD Azure Enterprise Subscription"
-$LighthouseTemplateFileUri = "https://raw.githubusercontent.com/EdWire/Infrastructure/master/Lighthouse/lighthouseTemplate.json"
-$LighthouseTemplateParameterFileUri = "https://raw.githubusercontent.com/EdWire/Infrastructure/master/Lighthouse/lighthouseTemplate.hisd-edwire.parameters.json"
-$ValidateOnly = $true
+# $AzureSubscriptionName = "HISD Azure Enterprise Subscription"
+# $LighthouseTemplateFileUri = "https://raw.githubusercontent.com/EdWire/Infrastructure/master/Lighthouse/lighthouseTemplate.json"
+# $LighthouseTemplateParameterFileUri = "https://raw.githubusercontent.com/EdWire/Infrastructure/master/Lighthouse/lighthouseTemplate.hisd-edwire.parameters.json"
+# $ValidateOnly = $true
 
-# Stop the script on first error
-$ErrorActionPreference = "Stop"
+# # Stop the script on first error
+# $ErrorActionPreference = "Stop"
 
-#---------------------------
-# Login and Select Azure Subscription
-#---------------------------
+# #---------------------------
+# # Login and Select Azure Subscription
+# #---------------------------
 
-# Select Subscription
-$azureSubscription = Set-AzContext -Subscription $AzureSubscriptionName
+# # Select Subscription
+# $azureSubscription = Set-AzContext -Subscription $AzureSubscriptionName
 
-Write-Output "Connected to Subscription $AzureSubscriptionName"
-Write-Output $azureSubscription
+# Write-Output "Connected to Subscription $AzureSubscriptionName"
+# Write-Output $azureSubscription
 
-#---------------------------
-# Enable Azure Lighthouse (Delegated Resource Management)
-#---------------------------
+# #---------------------------
+# # Enable Azure Lighthouse (Delegated Resource Management)
+# #---------------------------
 
-Test-AzDeployment -Location $ResourceGroupLocation `
-				  -TemplateUri $LighthouseTemplateFileUri `
-				  -TemplateParameterUri $LighthouseTemplateParameterFileUri `
-				  -Verbose
+# Test-AzDeployment -Location $ResourceGroupLocation `
+# 				  -TemplateUri $LighthouseTemplateFileUri `
+# 				  -TemplateParameterUri $LighthouseTemplateParameterFileUri `
+# 				  -Verbose
 
-if ($ValidateOnly -eq $false)
-{
-	Write-Output "New-AzDeployment - Start"
+# if ($ValidateOnly -eq $false)
+# {
+# 	Write-Output "New-AzDeployment - Start"
 	
-	New-AzDeployment -Name 'EdWire-Lighthouse-Deployment' `
-					 -Location $ResourceGroupLocation `
-					 -TemplateUri $LighthouseTemplateFileUri `
-					 -TemplateParameterUri $LighthouseTemplateParameterFileUri `
-					 -Verbose
+# 	New-AzDeployment -Name 'EdWire-Lighthouse-Deployment' `
+# 					 -Location $ResourceGroupLocation `
+# 					 -TemplateUri $LighthouseTemplateFileUri `
+# 					 -TemplateParameterUri $LighthouseTemplateParameterFileUri `
+# 					 -Verbose
 
-	Write-Output "New-AzDeployment - End"
-}
+# 	Write-Output "New-AzDeployment - End"
+# }
