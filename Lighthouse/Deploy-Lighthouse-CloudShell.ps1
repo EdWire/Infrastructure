@@ -12,10 +12,14 @@
 # Input Parameters
 #---------------------------
 
-$AzureSubscriptionName = "HISD Azure Enterprise Subscription"
-$LighthouseTemplateFileUri = "https://raw.githubusercontent.com/EdWire/Infrastructure/master/Lighthouse/lighthouseTemplate.json"
-$LighthouseTemplateParameterFileUri = "https://raw.githubusercontent.com/EdWire/Infrastructure/master/Lighthouse/lighthouseTemplate.hisd-edwire.parameters.json"
-$ValidateOnly = $true
+Param (
+    [String] $AzureTenantId = "[Customer's Azure Tenant Id]",
+    [String] $AzureSubscriptionName = "[Customer's Azure Subscription Name]",
+	[String] $ResourceGroupLocation = "[Azure Rescource Group Location]",
+	[String] $LighthouseTemplateFileUri = "https://raw.githubusercontent.com/EdWire/Infrastructure/master/Lighthouse/lighthouseTemplate.json",
+    [String] $LighthouseTemplateParameterFileUri = "https://raw.githubusercontent.com/EdWire/Infrastructure/master/Lighthouse/lighthouseTemplate.hisd-edwire.parameters.json",
+    [Switch] $ValidateOnly 
+)
 
 # Stop the script on first error
 $ErrorActionPreference = "Stop"
