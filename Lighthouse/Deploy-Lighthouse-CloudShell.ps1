@@ -12,7 +12,7 @@
 # Input Parameters
 #---------------------------
 
-$AzureSubscriptionName = "HISD Azure Enterprise Subscri""
+$AzureSubscriptionName = "HISD Azure Enterprise Subscription"
 $LighthouseTemplateFileUri = "https://raw.githubusercontent.com/EdWire/Infrastructure/master/Lighthouse/lighthouseTemplate.json"
 $LighthouseTemplateParameterFileUri = "https://raw.githubusercontent.com/EdWire/Infrastructure/master/Lighthouse/lighthouseTemplate.hisd-edwire.parameters.json"
 $ValidateOnly = $true
