@@ -16,6 +16,7 @@ $AzureSubscriptionName = "HISD Azure Enterprise Subscription"
 $LighthouseTemplateFileUri = "https://raw.githubusercontent.com/EdWire/Infrastructure/master/Lighthouse/lighthouseTemplate.json"
 $LighthouseTemplateParameterFileUri = "https://raw.githubusercontent.com/EdWire/Infrastructure/master/Lighthouse/lighthouseTemplate.hisd-edwire.parameters.json"
 $ValidateOnly = $true
+$ResourceGroupLocation = 'South Central US'
 
 # Stop the script on first error
 $ErrorActionPreference = "Stop"
