@@ -4,7 +4,7 @@
 # - The resource group(s) that is being given access to in the customer's Azure subscription must be created ahead of time
 # - Replace the $AzureSubscriptionName variable with the customer's Azure Subscription Name where the resource being given access are located
 # - Create or Update the parameters file in Github that will be used by this script to create the permissions between the Partner and Customer's Azure Subscriptions 
-# - In the parameters file, make sure that the values are accurate
+# - In the parameters file, make sure that the values are accurate 
 # - Confirm that the parameter file URI is correct in $LighthouseTemplateParameterFileUri variable below
 #---------------------------
 
