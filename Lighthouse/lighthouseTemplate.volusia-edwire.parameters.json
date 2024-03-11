@@ -14,9 +14,12 @@
     "resourceGroups": {
       "value": [
           {
-              "rgName": "edgraph-rg"
+            "rgName": "edgraph-rg"
+          },
+          {
+            "rgName": "edgraph-analytics-rg"
           }
-      ]
+    ]
     },
     "authorizations": {
       "value": [

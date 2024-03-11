@@ -13,11 +13,10 @@
 #---------------------------
 
 Param (
-    [String] $AzureTenantId = "c0c0a0c3-9870-4a2e-ab04-75388e8caf30",
-    [String] $AzureSubscriptionName = "Production",
-	[String] $ResourceGroupLocation = "EastUs",
+    [String] $AzureSubscriptionName,
+	[String] $ResourceGroupLocation,
 	[String] $LighthouseTemplateFileUri = "https://raw.githubusercontent.com/EdWire/Infrastructure/master/Lighthouse/lighthouseTemplate.json",
-    [String] $LighthouseTemplateParameterFileUri = "https://raw.githubusercontent.com/EdWire/Infrastructure/master/Lighthouse/lighthouseTemplate.hcesc-edwire.parameters.json",
+    [String] $LighthouseTemplateParameterFileUri = "https://raw.githubusercontent.com/EdWire/Infrastructure/master/Lighthouse/lighthouseTemplate.volusia-edwire.parameters.json",
     [Switch] $ValidateOnly 
 )
 
